@@ -36,10 +36,16 @@ _DEAL_MAP = {PropertyType.rent: ClientDealType.rent, PropertyType.sale: ClientDe
 
 
 async def begin_lead(
-    message: Message, state: FSMContext, session: AsyncSession, lang: str, property_id: str, bot: Bot
+    message: Message, state: FSMContext, session: AsyncSession, lang: str, property_id: str, bot: Bot,
+    *, user=None,
 ) -> None:
-    """Старт по deep-link `start=lead_<id>`."""
+    """Старт заявки по объекту: deep-link из канала ИЛИ кнопка в каталоге бота.
+
+    Для callback из каталога `message` — сообщение бота, поэтому реального
+    пользователя передаём через `user` (иначе взяли бы личность бота).
+    """
     await state.clear()
+    actor = user or message.from_user
     prop = await crud.get_property(session, property_id)
     if prop is None:
         await message.answer(i18n.t("lead_not_found", lang))
@@ -57,9 +63,9 @@ async def begin_lead(
     await message.answer(i18n.t("lead_ask_phone", lang), reply_markup=kb)
 
     # Клик по кнопке — сразу тёплый лид админам
-    who = escape(message.from_user.full_name or "")
-    uname = f" (@{escape(message.from_user.username)})" if message.from_user.username else ""
-    await _notify_admins(bot, f"🎯 <b>Лид с канала</b> по {escape(prop.id)}\n{who}{uname} нажал «Оставить заявку».")
+    who = escape(actor.full_name or "")
+    uname = f" (@{escape(actor.username)})" if actor.username else ""
+    await _notify_admins(bot, f"🎯 <b>Лид</b> по {escape(prop.id)}\n{who}{uname} нажал «Оставить заявку».")
 
 
 @router.message(LeadForm.phone, F.contact)
@@ -92,11 +98,11 @@ async def _finish_lead(
             district=prop.district,
             budget=prop.price,
             currency="сум",
-            residents=f"Заявка с канала по {prop.id}",
+            residents=f"Заявка по объекту {prop.id}",
         )
         await _notify_admins(
             bot,
-            f"🎯 <b>Заявка с канала</b>\nОбъект: {format_property_brief(prop)}\n"
+            f"🎯 <b>Заявка по объекту</b>\nОбъект: {format_property_brief(prop)}\n"
             f"Клиент: {escape(client.id)} · {escape(client.name or '—')} · 📞 {escape(phone)}",
         )
 

@@ -25,6 +25,8 @@ def role_choice_kb(lang: str) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [InlineKeyboardButton(text=i18n.btn("role_client", lang), callback_data="role:client")],
             [InlineKeyboardButton(text=i18n.btn("role_owner", lang), callback_data="role:owner")],
+            # Можно сразу смотреть объявления — без выбора роли (борьба с «пустым ботом»)
+            [InlineKeyboardButton(text=i18n.t("catalog_browse", lang), callback_data="cat:deal:all")],
         ]
     )
 
@@ -32,7 +34,10 @@ def role_choice_kb(lang: str) -> InlineKeyboardMarkup:
 def client_menu(lang: str) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text=i18n.btn("find_housing", lang))],
+            [
+                KeyboardButton(text=i18n.btn("find_housing", lang)),
+                KeyboardButton(text=i18n.btn("catalog", lang)),
+            ],
             [
                 KeyboardButton(text=i18n.btn("language", lang)),
                 KeyboardButton(text=i18n.btn("change_role", lang)),
@@ -50,6 +55,7 @@ def owner_menu(lang: str) -> ReplyKeyboardMarkup:
                 KeyboardButton(text=i18n.btn("my_objects", lang)),
             ],
             [
+                KeyboardButton(text=i18n.btn("catalog", lang)),
                 KeyboardButton(text=i18n.btn("language", lang)),
                 KeyboardButton(text=i18n.btn("change_role", lang)),
             ],

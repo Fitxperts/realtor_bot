@@ -31,6 +31,10 @@ def normalize(lang: str | None) -> str:
 BUTTONS: dict[str, dict[str, str]] = {
     # Reply-меню (матчатся по тексту — нужны все языки)
     "find_housing": {"uz": "🔎 Uy tanlash", "ru": "🔎 Подобрать жильё", "en": "🔎 Find housing"},
+    "catalog": {"uz": "📋 Eʼlonlar", "ru": "📋 Объявления", "en": "📋 Listings"},
+    "lead_cta": {"uz": "✍️ Ariza qoldirish", "ru": "✍️ Оставить заявку", "en": "✍️ Leave a request"},
+    "cat_more": {"uz": "⬇️ Yana koʻrsatish", "ru": "⬇️ Показать ещё", "en": "⬇️ Show more"},
+    "deal_all": {"uz": "Hammasi", "ru": "Все", "en": "All"},
     "add_object": {"uz": "➕ E’lon joylash", "ru": "➕ Разместить объект", "en": "➕ Post a listing"},
     "my_objects": {"uz": "📋 Mening e’lonlarim", "ru": "📋 Мои объекты", "en": "📋 My listings"},
     "change_role": {"uz": "↩️ Rolni almashtirish", "ru": "↩️ Сменить роль", "en": "↩️ Change role"},
@@ -153,6 +157,32 @@ MESSAGES: dict[str, dict[str, str]] = {
         "uz": "Sizda hozircha joylangan obyektlar yoʻq.",
         "ru": "У вас пока нет размещённых объектов.",
         "en": "You have no listings yet.",
+    },
+    # --- Каталог (просмотр объявлений в боте) ---
+    "catalog_pick": {
+        "uz": "🏠 Nimani koʻrsatay?",
+        "ru": "🏠 Что показать?",
+        "en": "🏠 What should I show?",
+    },
+    "catalog_empty": {
+        "uz": "Hozircha faol eʼlonlar yoʻq. Ariza qoldiring — rieltor siz uchun tanlab beradi 👇",
+        "ru": "Пока нет активных объявлений. Оставьте заявку — риелтор подберёт под вас 👇",
+        "en": "No active listings yet. Leave a request — an agent will find options for you 👇",
+    },
+    "catalog_footer": {
+        "uz": "Koʻrsatildi: {shown}/{total}",
+        "ru": "Показано {shown} из {total}",
+        "en": "Shown {shown} of {total}",
+    },
+    "catalog_end": {
+        "uz": "✅ Hammasi shu. Mos variant topilmadimi? Ariza qoldiring 👇",
+        "ru": "✅ Это все объявления. Не нашли подходящее? Оставьте заявку 👇",
+        "en": "✅ That’s all listings. Didn’t find a fit? Leave a request 👇",
+    },
+    "catalog_browse": {
+        "uz": "📋 Eʼlonlarni koʻrish",
+        "ru": "📋 Смотреть объявления",
+        "en": "📋 Browse listings",
     },
     # --- Служебное ---
     "cancel_none": {

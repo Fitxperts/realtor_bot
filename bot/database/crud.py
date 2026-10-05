@@ -188,6 +188,35 @@ async def list_properties(
     return list(await session.scalars(stmt))
 
 
+async def count_active_properties(
+    session: AsyncSession, *, prop_type: PropertyType | None = None
+) -> int:
+    """Сколько активных объявлений в каталоге (с учётом фильтра по типу сделки)."""
+    stmt = select(func.count()).select_from(Property).where(Property.status == PropertyStatus.active)
+    if prop_type is not None:
+        stmt = stmt.where(Property.type == prop_type)
+    return int(await session.scalar(stmt) or 0)
+
+
+async def active_properties_page(
+    session: AsyncSession,
+    *,
+    prop_type: PropertyType | None = None,
+    offset: int = 0,
+    limit: int = 3,
+) -> list[Property]:
+    """Страница активных объявлений для каталога (свежие/поднятые — первыми)."""
+    stmt = select(Property).where(Property.status == PropertyStatus.active)
+    if prop_type is not None:
+        stmt = stmt.where(Property.type == prop_type)
+    stmt = (
+        stmt.order_by(Property.last_bump.desc().nullslast(), Property.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return list(await session.scalars(stmt))
+
+
 async def list_owner_properties(
     session: AsyncSession, telegram_id: int, *, limit: int = 20
 ) -> list[Property]:
