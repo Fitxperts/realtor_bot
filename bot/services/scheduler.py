@@ -6,8 +6,9 @@
 - напоминание за 2 часа (каждые 15 минут);
 - напоминание за 30 минут (каждые 5 минут);
 - копия ночного бэкапа базы в Telegram + тревога, если бэкапа нет (04:10);
-- сторож ИИ: тревога, если все ИИ-провайдеры лежат > 10 минут (каждые 5 минут).
-В демо-режиме вместо автоподнятия — ночной сброс демо-данных (05:00).
+- сторож ИИ: тревога, если все ИИ-провайдеры лежат > 10 минут (каждые 5 минут);
+- проверка актуальности объявлений (ежедневно 11:00).
+В демо-режиме вместо автоподнятия и проверки актуальности — ночной сброс (05:00).
 """
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ from bot.database.session import get_sessionmaker
 from bot.services import publisher
 from bot.services.ai_health import check_ai_outage
 from bot.services.backups import ship_latest_backup
+from bot.services.freshness import run_freshness
 from bot.services.notify import notify_admins
 from bot.utils import timeutils
 
@@ -108,6 +110,10 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         scheduler.add_job(
             auto_bump, trigger="cron", hour=10, minute=0, args=[bot],
             id="auto_bump", replace_existing=True,
+        )
+        scheduler.add_job(
+            run_freshness, trigger="cron", hour=11, minute=0, args=[bot],
+            id="freshness", replace_existing=True,
         )
     # Непересекающиеся окна: за день (2ч..24ч), за 2 часа (30м..2ч), за 30 минут (0..30м)
     scheduler.add_job(

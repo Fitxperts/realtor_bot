@@ -244,6 +244,7 @@ async def properties_due_for_bump(session: AsyncSession, older_than: dt.datetime
     stmt = select(Property).where(
         Property.status == PropertyStatus.active,
         (Property.last_bump.is_(None)) | (Property.last_bump < older_than),
+        Property.freshness_asked_at.is_(None),  # ждёт ответа «актуально?» — не поднимаем
     )
     return list(await session.scalars(stmt))
 

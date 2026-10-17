@@ -57,6 +57,9 @@ BUTTONS: dict[str, dict[str, str]] = {
     "yes": {"uz": "Ha", "ru": "Да", "en": "Yes"},
     "no": {"uz": "Yoʻq", "ru": "Нет", "en": "No"},
     "done": {"uz": "Tayyor", "ru": "Готово", "en": "Done"},
+    # Проверка актуальности
+    "fresh_yes": {"uz": "✅ Ha, dolzarb", "ru": "✅ Да, актуально", "en": "✅ Yes, still available"},
+    "fresh_sold": {"uz": "⛔ Sotildi / ijaraga berildi", "ru": "⛔ Сдано / продано", "en": "⛔ Rented / sold"},
     # Подписки на поиск
     "subs": {"uz": "🔔 Obunalarim", "ru": "🔔 Мои подписки", "en": "🔔 My alerts"},
     "sub_off": {"uz": "🔕 Obunani bekor qilish", "ru": "🔕 Отписаться", "en": "🔕 Unsubscribe"},
@@ -119,6 +122,43 @@ def all_menu_texts() -> set[str]:
 # Сообщения: key -> {lang: text}
 # ---------------------------------------------------------------------------
 MESSAGES: dict[str, dict[str, str]] = {
+    # --- Проверка актуальности ---
+    "fresh_ask": {
+        "uz": "🕑 <b>{id} eʼloni hali dolzarbmi?</b>\nU katalogda 2 haftadan beri turibdi. 3 kun ichida javob "
+              "boʻlmasa — mijozlar bekorga qoʻngʻiroq qilmasligi uchun eʼlonni olib tashlaymiz.",
+        "ru": "🕑 <b>Объявление {id} ещё актуально?</b>\nОно в каталоге уже 2 недели. Если не ответить за "
+              "3 дня — снимем его с публикации, чтобы клиенты не звонили зря.",
+        "en": "🕑 <b>Is listing {id} still available?</b>\nIt has been in the catalog for 2 weeks. Without an "
+              "answer in 3 days we’ll unpublish it so clients don’t call in vain.",
+    },
+    "fresh_yes_done": {
+        "uz": "✅ Rahmat! Eʼlon katalogda qoladi.",
+        "ru": "✅ Спасибо! Объявление остаётся в каталоге.",
+        "en": "✅ Thanks! The listing stays in the catalog.",
+    },
+    "fresh_restored": {
+        "uz": "♻️ Eʼlon yana katalogda va kanalda.",
+        "ru": "♻️ Объявление снова в каталоге и в канале.",
+        "en": "♻️ The listing is back in the catalog and the channel.",
+    },
+    "fresh_sold_done": {
+        "uz": "⛔ Sotilgan / ijaraga berilgan deb belgilandi. Rahmat!",
+        "ru": "⛔ Отметили как сданное / проданное. Спасибо!",
+        "en": "⛔ Marked as rented / sold. Thanks!",
+    },
+    "fresh_archived": {
+        "uz": "🗄 {id} eʼloni olib tashlandi: dolzarbligi haqida javob boʻlmadi. Hali dolzarb boʻlsa — "
+              "tugmani bosing, qaytaramiz.",
+        "ru": "🗄 Объявление {id} снято с публикации: не было ответа, актуально ли оно. Если ещё "
+              "актуально — нажмите кнопку, вернём.",
+        "en": "🗄 Listing {id} was unpublished: there was no answer whether it’s still available. If it "
+              "is — tap the button and we’ll bring it back.",
+    },
+    "fresh_closed": {
+        "uz": "Bu obyekt allaqachon yopilgan.",
+        "ru": "Этот объект уже закрыт.",
+        "en": "This listing is already closed.",
+    },
     # --- Подписки на поиск ---
     "sub_enabled": {
         "uz": "🔔 Obuna yoqildi: mos obyekt paydo boʻlishi bilan shu yerga yuboraman. "

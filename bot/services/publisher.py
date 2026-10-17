@@ -193,6 +193,23 @@ async def mark_as_rented(bot: Bot, session: AsyncSession, property_id: str) -> P
     return prop
 
 
+async def archive_stale(bot: Bot, session: AsyncSession, property_id: str) -> Property | None:
+    """Снять неподтверждённый объект: архив + пометка поста «эълон долзарб эмас»."""
+    prop = await crud.get_property(session, property_id)
+    if prop is None:
+        return None
+    prop.status = PropertyStatus.archived
+    if prop.channel_post_id:
+        base = get_ai_service().generate_description(_prop_to_dict(prop))
+        await _edit_post(
+            bot, get_settings().channel_id, prop.channel_post_id, "🗄 *Эълон долзарб эмас*\n\n" + base,
+            is_caption=_caption_post(prop.photo_list, base),
+        )
+    await session.commit()
+    logger.info("Объект %s снят: нет ответа об актуальности", prop.id)
+    return prop
+
+
 async def bump_property(bot: Bot, session: AsyncSession, property_id: str) -> Property | None:
     """Поднять объект: пометить старый пост архивным и опубликовать новый."""
     prop = await crud.get_property(session, property_id)

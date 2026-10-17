@@ -132,6 +132,9 @@ class Property(Base):
 
     channel_post_id: Mapped[int | None] = mapped_column(Integer)
     last_bump: Mapped[dt.datetime | None] = mapped_column(DateTime())
+    # Проверка актуальности: когда спросили «ещё актуально?» и когда подтвердили
+    freshness_asked_at: Mapped[dt.datetime | None] = mapped_column(DateTime())
+    confirmed_at: Mapped[dt.datetime | None] = mapped_column(DateTime())
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(), default=timeutils.now
     )
