@@ -13,6 +13,8 @@ from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
     KeyboardButton,
     Message,
     ReplyKeyboardMarkup,
@@ -98,8 +100,9 @@ async def _finish_lead(
             deal_type=_DEAL_MAP.get(prop.type, ClientDealType.rent),
             district=prop.district,
             budget=prop.price,
-            currency="сум",
+            currency=prop.currency or "сум",
             residents=f"Заявка по объекту {prop.id}",
+            notify=False,  # похожие присылаем только по согласию (кнопка ниже)
         )
         admin_text = (
             f"🎯 <b>Заявка по объекту</b>\nОбъект: {format_property_brief(prop)}\n"
@@ -110,6 +113,10 @@ async def _finish_lead(
     await message.answer(i18n.t("lead_thanks", lang), reply_markup=ReplyKeyboardRemove())
     if prop is not None and get_settings().demo_mode:
         await demo.show_lead_view(message, lang, admin_text)
+    if prop is not None:
+        await message.answer(i18n.t("sub_offer_similar", lang), reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text=i18n.btn("sub_on_similar", lang), callback_data=f"sub:on:{client.id}")
+        ]]))
 
 
 # Заглушка на случай, если объект уже удалён, а пользователь всё же в состоянии

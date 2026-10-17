@@ -48,7 +48,7 @@ async def test_search_and_pagination(session):
     assert len(page1) == 5 and len(page2) == 2
 
     found = await crud.search_properties(session, prop_type=PropertyType.sale, district="Центр",
-                                         rooms=2, max_price=150, limit=10)
+                                         rooms=2, max_price_usd=150, limit=10)
     assert len(found) == 7
 
 

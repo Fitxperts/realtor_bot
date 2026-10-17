@@ -45,6 +45,7 @@ def client_menu(lang: str) -> ReplyKeyboardMarkup:
                 KeyboardButton(text=i18n.btn("find_housing", lang)),
                 KeyboardButton(text=i18n.btn("catalog", lang)),
             ],
+            [KeyboardButton(text=i18n.btn("subs", lang))],
             [
                 KeyboardButton(text=i18n.btn("language", lang)),
                 KeyboardButton(text=i18n.btn("change_role", lang)),

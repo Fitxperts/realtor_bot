@@ -1,10 +1,11 @@
 """SQLAlchemy-модели РиелторБота.
 
-Четыре таблицы:
-- properties  — объекты недвижимости (PK вида ``APT_1001``)
-- clients     — заявки клиентов (PK вида ``CLT_001``)
-- meetings    — встречи и просмотры
-- bot_users   — пользователи бота
+Пять таблиц:
+- properties    — объекты недвижимости (PK вида ``APT_1001``)
+- clients       — заявки клиентов (PK вида ``CLT_001``); заявка = подписка на поиск
+- meetings      — встречи и просмотры
+- bot_users     — пользователи бота
+- search_alerts — какие объекты уже присланы по подпискам (без повторов, лимит в день)
 """
 from __future__ import annotations
 
@@ -22,6 +23,8 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
+    true,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -164,6 +167,8 @@ class Client(Base):
     status: Mapped[ClientStatus] = mapped_column(
         Enum(ClientStatus), default=ClientStatus.new, index=True
     )
+    # Присылать ли новые подходящие объекты (подписка на поиск; «Отписаться» → False)
+    notify: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(), default=timeutils.now
     )
@@ -213,3 +218,16 @@ class BotUser(Base):
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(), default=timeutils.now
     )
+
+
+class SearchAlert(Base):
+    """Объект, присланный пользователю по подписке: без повторов и с лимитом в сутки."""
+
+    __tablename__ = "search_alerts"
+    __table_args__ = (UniqueConstraint("telegram_id", "property_id", name="uq_alert_user_property"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"), index=True)
+    property_id: Mapped[str] = mapped_column(ForeignKey("properties.id", ondelete="CASCADE"), index=True)
+    sent_at: Mapped[dt.datetime] = mapped_column(DateTime(), default=timeutils.now, index=True)

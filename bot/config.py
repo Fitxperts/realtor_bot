@@ -128,6 +128,10 @@ class Settings:
         self.demo_photos_dir: str = os.getenv("DEMO_PHOTOS_DIR", "/app/demo_photos").strip()
         self.demo_daily_limit: int = int(os.getenv("DEMO_DAILY_LIMIT", "3") or 3)
 
+        # Подписки на поиск: курс для сравнения цен в $ и сумах, лимит уведомлений
+        self.usd_rate: float = float(os.getenv("USD_RATE", "12000") or 12000)
+        self.alerts_daily_limit: int = int(os.getenv("ALERTS_DAILY_LIMIT", "5") or 5)
+
         # Лендинг на домене бота (режим webhook): ссылки кнопок страницы
         self.landing_demo_url: str = os.getenv("LANDING_DEMO_URL", "").strip()
         self.landing_contact_url: str = os.getenv("LANDING_CONTACT_URL", "").strip()

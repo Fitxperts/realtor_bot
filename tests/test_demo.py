@@ -90,8 +90,9 @@ async def test_catalog_shows_seed_with_cover_and_lead_view(make_harness):
     await h.message(VISITOR, contact="+998905556677")
     texts = h.texts_to(VISITOR)
     assert any("Спасибо! Заявка принята" in t for t in texts)
-    view = texts[-1]
-    assert "Так вашу заявку видит агентство" in view and "APT_1001" in view and "+998905556677" in view
+    view = next(t for t in texts if "Так вашу заявку видит агентство" in t)
+    assert "APT_1001" in view and "+998905556677" in view
+    assert texts[-1] == "Прислать похожие объекты, когда появятся?"  # подписка — только по согласию
     assert any("Заявка по объекту" in t for t in h.texts_to(ADMIN))
 
 

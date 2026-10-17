@@ -57,6 +57,11 @@ BUTTONS: dict[str, dict[str, str]] = {
     "yes": {"uz": "Ha", "ru": "Да", "en": "Yes"},
     "no": {"uz": "Yoʻq", "ru": "Нет", "en": "No"},
     "done": {"uz": "Tayyor", "ru": "Готово", "en": "Done"},
+    # Подписки на поиск
+    "subs": {"uz": "🔔 Obunalarim", "ru": "🔔 Мои подписки", "en": "🔔 My alerts"},
+    "sub_off": {"uz": "🔕 Obunani bekor qilish", "ru": "🔕 Отписаться", "en": "🔕 Unsubscribe"},
+    "sub_on_similar": {"uz": "🔔 Oʻxshashlarini yuborish", "ru": "🔔 Присылать похожие", "en": "🔔 Send similar"},
+    "sub_new": {"uz": "➕ Yangi obuna", "ru": "➕ Новая подписка", "en": "➕ New alert"},
     # Демо-бот
     "demo_want": {"uz": "💼 Menga ham shunday bot", "ru": "💼 Хочу такой бот", "en": "💼 I want this bot"},
     # --- Админ-панель: reply-меню ---
@@ -100,7 +105,7 @@ def btn_variants(action: str) -> set[str]:
 
 
 # Тексты reply-меню, которые нужно исключать из catch-all (все языки)
-_MENU_ACTIONS = ("find_housing", "add_object", "my_objects", "change_role", "language")
+_MENU_ACTIONS = ("find_housing", "add_object", "my_objects", "change_role", "language", "subs")
 
 
 def all_menu_texts() -> set[str]:
@@ -114,6 +119,48 @@ def all_menu_texts() -> set[str]:
 # Сообщения: key -> {lang: text}
 # ---------------------------------------------------------------------------
 MESSAGES: dict[str, dict[str, str]] = {
+    # --- Подписки на поиск ---
+    "sub_enabled": {
+        "uz": "🔔 Obuna yoqildi: mos obyekt paydo boʻlishi bilan shu yerga yuboraman. "
+              "Obunalarni boshqarish — «🔔 Obunalarim» tugmasi.",
+        "ru": "🔔 Подписка включена: как только появится подходящий объект — пришлю сюда. "
+              "Управлять подписками — кнопка «🔔 Мои подписки».",
+        "en": "🔔 Alert is on: as soon as a matching listing appears, I’ll send it here. "
+              "Manage alerts with “🔔 My alerts”.",
+    },
+    "alert_new": {
+        "uz": "🔔 <b>Soʻrovingiz boʻyicha yangi obyekt</b>",
+        "ru": "🔔 <b>Новый объект по вашему запросу</b>",
+        "en": "🔔 <b>New listing matching your request</b>",
+    },
+    "subs_title": {
+        "uz": "🔔 <b>Obunalaringiz</b> — mos yangi obyektlarni yuboraman:",
+        "ru": "🔔 <b>Ваши подписки</b> — пришлю новые подходящие объекты:",
+        "en": "🔔 <b>Your alerts</b> — I’ll send new matching listings:",
+    },
+    "subs_empty": {
+        "uz": "Hozircha obunangiz yoʻq. Soʻrov qoldiring — bot mos obyektlarni oʻzi yuboradi.",
+        "ru": "У вас пока нет подписок. Оставьте запрос — и бот сам пришлёт подходящие объекты.",
+        "en": "You have no alerts yet. Leave a request and the bot will send matching listings.",
+    },
+    "sub_line": {"uz": "🔎 <b>{deal}</b> · {district}{budget}", "ru": "🔎 <b>{deal}</b> · {district}{budget}",
+                 "en": "🔎 <b>{deal}</b> · {district}{budget}"},
+    "sub_budget": {"uz": " · {amount} gacha", "ru": " · до {amount}", "en": " · up to {amount}"},
+    "sub_off_done": {
+        "uz": "🔕 Obuna bekor qilindi — bu soʻrov boʻyicha boshqa yubormayman.",
+        "ru": "🔕 Отписались — больше не пришлю объекты по этому запросу.",
+        "en": "🔕 Unsubscribed — no more listings for this request.",
+    },
+    "sub_on_done": {
+        "uz": "🔔 Tayyor — oʻxshash obyektlar chiqishi bilan yuboraman.",
+        "ru": "🔔 Готово — пришлю похожие объекты, как появятся.",
+        "en": "🔔 Done — I’ll send similar listings as they appear.",
+    },
+    "sub_offer_similar": {
+        "uz": "Oʻxshash obyektlar chiqqanda yuborsammi?",
+        "ru": "Прислать похожие объекты, когда появятся?",
+        "en": "Want similar listings when they appear?",
+    },
     # --- Демо-бот (DEMO_MODE) ---
     "demo_welcome": {
         "uz": "👋 <b>Bu RieltorBot demo versiyasi</b> — koʻchmas mulk agentliklari uchun Telegram-bot.\n\n"
@@ -354,14 +401,14 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Type the district name:",
     },
     "ask_budget": {
-        "uz": "💰 Byudjetingiz qancha? Summani yozing (masalan, 3000000):",
-        "ru": "💰 Какой у вас бюджет? Напишите сумму (например, 3000000):",
-        "en": "💰 What’s your budget? Enter an amount (e.g. 3000000):",
+        "uz": "💰 Byudjetingiz qancha? Masalan: 400$ yoki 4 mln soʻm",
+        "ru": "💰 Какой у вас бюджет? Например: 400$ или 4 млн сум",
+        "en": "💰 What’s your budget? For example: $400 or 4 mln sum",
     },
     "budget_bad": {
-        "uz": "Summa tushunarsiz. Raqam kiriting, masalan 3000000.",
-        "ru": "Не понял сумму. Введите число, например 3000000.",
-        "en": "Couldn’t read the amount. Enter a number, e.g. 3000000.",
+        "uz": "Summa tushunarsiz. Masalan: 400$, 4 mln yoki 4000000.",
+        "ru": "Не понял сумму. Например: 400$, 4 млн или 4000000.",
+        "en": "Couldn’t read the amount. For example: $400, 4 mln or 4000000.",
     },
     "ask_phone": {
         "uz": "📞 Bogʻlanish uchun telefon qoldiring (yoki tugma bilan yuboring):",

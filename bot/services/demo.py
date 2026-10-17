@@ -19,7 +19,15 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.config import get_settings
-from bot.database.models import Client, Meeting, Property, PropertyKind, PropertyStatus, PropertyType
+from bot.database.models import (
+    Client,
+    Meeting,
+    Property,
+    PropertyKind,
+    PropertyStatus,
+    PropertyType,
+    SearchAlert,
+)
 from bot.database.session import get_sessionmaker
 
 logger = logging.getLogger(__name__)
@@ -288,6 +296,7 @@ async def reset_demo(bot: Bot) -> dict:
                     await bot.delete_message(channel, prop.channel_post_id)
                 except Exception:  # noqa: BLE001 - пост уже удалён / старше 48 ч
                     logger.debug("Демо: пост %s не удалён", prop.channel_post_id)
+        await session.execute(delete(SearchAlert))
         meetings = (await session.execute(delete(Meeting))).rowcount
         clients = (await session.execute(delete(Client))).rowcount
         await session.execute(delete(Property).where(Property.id.not_in(SEED_IDS)))

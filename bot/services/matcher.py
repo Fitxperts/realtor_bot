@@ -1,9 +1,14 @@
-"""Подбор объектов недвижимости под заявку клиента и наоборот."""
+"""Подбор объектов недвижимости под заявку клиента и наоборот.
+
+Цены объектов и бюджеты бывают в $ и в сумах — сравниваем в долларах по курсу
+USD_RATE (bot/utils/money.py). Допуск по бюджету +10%.
+"""
 from __future__ import annotations
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.config import get_settings
 from bot.database import crud
 from bot.database.models import (
     Client,
@@ -12,6 +17,7 @@ from bot.database.models import (
     Property,
     PropertyType,
 )
+from bot.utils.money import to_usd
 
 # Сопоставление типа сделки клиента и типа объекта
 _DEAL_MAP = {
@@ -26,20 +32,27 @@ _REVERSE_DEAL_MAP = {
 _TOL = 0.10  # допуск по бюджету +10%
 
 
+def _budget_usd(client: Client, rate: float) -> float | None:
+    budget = to_usd(client.budget, client.currency, rate)
+    return budget * (1 + _TOL) if budget is not None else None
+
+
 async def find_for_client(session: AsyncSession, client: Client, *, limit: int = 5) -> list[Property]:
     """Найти активные объекты, подходящие под заявку клиента."""
+    rate = get_settings().usd_rate
     return await crud.search_properties(
         session,
         prop_type=_DEAL_MAP.get(client.deal_type),
         district=client.district,
         rooms=client.rooms,
-        max_price=float(client.budget) if client.budget is not None else None,
+        max_price_usd=_budget_usd(client, rate),
+        usd_rate=rate,
         limit=limit,
     )
 
 
 async def clients_for_property(session: AsyncSession, prop: Property, *, limit: int = 100) -> list[Client]:
-    """Найти клиентов (не закрытых), чьи заявки подходят под объект."""
+    """Клиенты с включённой подпиской (не закрытые), чьи заявки подходят под объект."""
     want_deal = _REVERSE_DEAL_MAP.get(prop.type)
     if want_deal is None:
         return []
@@ -47,14 +60,17 @@ async def clients_for_property(session: AsyncSession, prop: Property, *, limit: 
     stmt = select(Client).where(
         Client.deal_type == want_deal,
         Client.status != ClientStatus.closed,
+        Client.notify.is_(True),
     )
     candidates = list(await session.scalars(stmt))
 
-    price = float(prop.price) if prop.price is not None else None
+    rate = get_settings().usd_rate
+    price = to_usd(prop.price, prop.currency, rate)
     result: list[Client] = []
     for client in candidates:
-        # Бюджет: цена объекта не выше бюджета клиента +10%
-        if price is not None and client.budget is not None and price > float(client.budget) * (1 + _TOL):
+        # Бюджет: цена объекта (в $) не выше бюджета клиента (в $) +10%
+        budget = _budget_usd(client, rate)
+        if price is not None and budget is not None and price > budget:
             continue
         # Район: если у клиента задан — объект должен ему соответствовать
         if client.district and prop.district and client.district.lower() not in prop.district.lower():

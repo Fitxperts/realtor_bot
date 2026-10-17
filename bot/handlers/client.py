@@ -22,8 +22,9 @@ from bot.database.models import ClientDealType
 from bot.keyboards import client_kb
 from bot.services import matcher
 from bot.states.client_states import ClientForm
-from bot.utils.formatters import format_client_card, format_property_card
-from bot.utils.validators import is_valid_phone, parse_price
+from bot.utils.formatters import format_client_card, format_money, format_property_card
+from bot.utils.money import parse_money
+from bot.utils.validators import is_valid_phone
 
 logger = logging.getLogger(__name__)
 router = Router(name="client")
@@ -101,11 +102,11 @@ async def _ask_budget(message: Message, state: FSMContext, lang: str) -> None:
 
 @router.message(ClientForm.budget, F.text)
 async def budget_txt(message: Message, state: FSMContext, lang: str) -> None:
-    budget = parse_price(message.text)
-    if budget is None:
+    money = parse_money(message.text)
+    if money is None:
         await message.answer(i18n.t("budget_bad", lang))
         return
-    await state.update_data(budget=budget)
+    await state.update_data(budget=money[0], budget_currency=money[1])
     await _ask_phone(message, state, lang)
 
 
@@ -171,12 +172,13 @@ async def confirm_save(
         deal_type=ClientDealType(data["deal_type"]),
         district=data.get("district"),
         budget=data.get("budget"),
-        currency="сум",
+        currency=data.get("budget_currency") or "сум",
     )
     await state.clear()
 
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.message.answer(i18n.t("request_accepted", lang))
+    await callback.message.answer(i18n.t("sub_enabled", lang))
     await callback.answer()
 
     # Уведомление администратору (на русском — панель оператора)
@@ -230,7 +232,7 @@ def _preview_card(data: dict, lang: str) -> str:
     deal_key = "deal_rent_word" if data.get("deal_type") == "rent" else "deal_buy_word"
     deal = i18n.t(deal_key, lang)
     budget = data.get("budget")
-    budget_str = f"{int(budget):,}".replace(",", " ") + " сум" if budget else "—"
+    budget_str = format_money(budget, data.get("budget_currency") or "сум") if budget else "—"
     lines = [
         i18n.t("preview_request", lang),
         f"{i18n.t('preview_deal', lang)}: {deal}",

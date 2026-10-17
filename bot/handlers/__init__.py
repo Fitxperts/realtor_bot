@@ -7,7 +7,7 @@
 from aiogram import Dispatcher
 
 from bot.config import get_settings
-from bot.handlers import admin, catalog, client, common, demo, lead, owner
+from bot.handlers import admin, catalog, client, common, demo, lead, owner, subscriptions
 
 
 def register_routers(dp: Dispatcher) -> None:
@@ -16,6 +16,7 @@ def register_routers(dp: Dispatcher) -> None:
     if get_settings().demo_mode:
         dp.include_router(demo.router)  # демо-бот: «Хочу такой бот» (до common — ловит кнопку меню)
     dp.include_router(catalog.router)   # просмотр объявлений в боте (до common — ловит кнопку меню)
+    dp.include_router(subscriptions.router)  # «🔔 Мои подписки», отписка (до common — кнопка меню)
     dp.include_router(common.router)
     dp.include_router(owner.router)
     dp.include_router(client.router)

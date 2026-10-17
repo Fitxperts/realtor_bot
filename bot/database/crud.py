@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -157,9 +157,11 @@ async def search_properties(
     prop_type: PropertyType | None = None,
     district: str | None = None,
     rooms: int | None = None,
-    max_price: float | None = None,
+    max_price_usd: float | None = None,
+    usd_rate: float = 12_000,
     limit: int = 5,
 ) -> list[Property]:
+    """Активные объекты по критериям; потолок цены — в долларах (цены в сумах пересчитываются)."""
     stmt = select(Property).where(Property.status == PropertyStatus.active)
     if prop_type is not None:
         stmt = stmt.where(Property.type == prop_type)
@@ -167,8 +169,10 @@ async def search_properties(
         stmt = stmt.where(Property.district.ilike(f"%{district}%"))
     if rooms is not None:
         stmt = stmt.where(Property.rooms == rooms)
-    if max_price is not None:
-        stmt = stmt.where(Property.price <= max_price)
+    if max_price_usd is not None:
+        is_usd = or_(Property.currency.contains("$"), func.lower(Property.currency).in_(("usd", "у.е.")))
+        price_usd = case((is_usd, Property.price), else_=Property.price / usd_rate)
+        stmt = stmt.where(price_usd <= max_price_usd)
     stmt = stmt.order_by(Property.last_bump.desc().nullslast(), Property.created_at.desc()).limit(limit)
     result = await session.scalars(stmt)
     return list(result)
