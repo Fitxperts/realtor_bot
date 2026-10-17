@@ -38,6 +38,11 @@ _COOLDOWN_PERMANENT = 3600
 _COOLDOWN_TRANSIENT = 120
 _PERMANENT_MARKERS = ("404", "401", "403", "not found", "no longer available",
                       "invalid api key", "valid api key", "decommission", "deprecat")
+# Нижняя граница max_tokens. «Думающие» модели (gpt-oss, gemini-3 flash) тратят
+# часть лимита на рассуждение; при малом лимите ответ приходит ПУСТЫМ — и
+# рабочий провайдер ошибочно уходит на паузу. Это потолок, а не расход: короткий
+# ответ дешевле не станет и дороже тоже.
+MIN_OUTPUT_TOKENS = 1024
 
 
 @dataclass
@@ -142,7 +147,10 @@ def _is_permanent(exc: Exception) -> bool:
 class LLMRouter:
     """Отправляет запрос первому живому провайдеру цепочки."""
 
-    def __init__(self, specs: list[ProviderSpec]) -> None:
+    def __init__(self, specs: list[ProviderSpec], *, label: str | None = None) -> None:
+        # label ("text" / "vision") — под этим именем сторож ИИ (ai_health)
+        # следит за сбоями цепочки; None — не отслеживать (тесты, временные).
+        self.label = label
         self._live: list[_Live] = []
         for spec in specs:
             try:
@@ -170,6 +178,7 @@ class LLMRouter:
         return ready or list(self._live)
 
     async def _call(self, p: _Live, messages: list[dict], max_tokens: int) -> str:
+        max_tokens = max(max_tokens, MIN_OUTPUT_TOKENS)
         if p.spec.backend == "anthropic":
             system = next((m["content"] for m in messages if m["role"] == "system"), None)
             msgs = [m for m in messages if m["role"] != "system"]
@@ -186,6 +195,7 @@ class LLMRouter:
     async def complete(self, messages: list[dict], *, max_tokens: int = 500,
                        openai_only: bool = False) -> str | None:
         """Текст ответа первого живого провайдера или None (все упали/не настроены)."""
+        errors: dict[str, str] = {}
         for p in self._order():
             if openai_only and p.spec.backend != "openai":
                 continue
@@ -196,15 +206,30 @@ class LLMRouter:
                 p.ok_count += 1
                 p.last_error = ""
                 p.cooldown_until = 0.0
+                self._report(ok=True)
                 return text
             except Exception as exc:  # noqa: BLE001 - любой сбой → следующий провайдер
                 p.fail_count += 1
                 p.last_error = f"{type(exc).__name__}: {str(exc)[:200]}"
+                errors[f"{p.spec.name} ({p.spec.model})"] = p.last_error
                 pause = _COOLDOWN_PERMANENT if _is_permanent(exc) else _COOLDOWN_TRANSIENT
                 p.cooldown_until = time.monotonic() + pause
                 logger.warning("LLM %s:%s упал (%s) → пауза %dс, пробую следующий",
                                p.spec.name, p.spec.model, p.last_error, pause)
+        if errors:  # кого-то пробовали, и все упали (без попыток — это не сбой)
+            logger.warning("LLM-цепочка %s: все провайдеры недоступны", self.label or "")
+            self._report(ok=False, errors=errors)
         return None
+
+    def _report(self, *, ok: bool, errors: dict[str, str] | None = None) -> None:
+        if self.label is None:
+            return
+        from bot.services.ai_health import OUTAGES
+
+        if ok:
+            OUTAGES.record_ok(self.label)
+        else:
+            OUTAGES.record_fail(self.label, errors or {})
 
     async def probe(self) -> list[dict]:
         """Проверить КАЖДОГО провайдера коротким запросом (для /ai_status)."""
@@ -212,10 +237,12 @@ class LLMRouter:
         for p in self._live:
             started = time.monotonic()
             try:
-                text = await self._call(p, [{"role": "user", "content": "Reply with: OK"}], 10)
+                text = await self._call(p, [{"role": "user", "content": "Reply with: OK"}], 16)
                 results.append({"name": p.spec.name, "model": p.spec.model, "ok": bool(text),
-                                "ms": int((time.monotonic() - started) * 1000), "error": ""})
-                p.cooldown_until = 0.0
+                                "ms": int((time.monotonic() - started) * 1000),
+                                "error": "" if text else "пустой ответ"})
+                if text:
+                    p.cooldown_until = 0.0
             except Exception as exc:  # noqa: BLE001
                 results.append({"name": p.spec.name, "model": p.spec.model, "ok": False,
                                 "ms": int((time.monotonic() - started) * 1000),

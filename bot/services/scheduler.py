@@ -1,11 +1,12 @@
 """Планировщик фоновых задач (APScheduler).
 
-Пять задач:
+Шесть задач:
 - автоподнятие активных объектов (ежедневно 10:00);
 - напоминание о встрече за день (ежечасно);
 - напоминание за 2 часа (каждые 15 минут);
 - напоминание за 30 минут (каждые 5 минут);
-- копия ночного бэкапа базы в Telegram + тревога, если бэкапа нет (04:10).
+- копия ночного бэкапа базы в Telegram + тревога, если бэкапа нет (04:10);
+- сторож ИИ: тревога, если все ИИ-провайдеры лежат > 10 минут (каждые 5 минут).
 """
 from __future__ import annotations
 
@@ -15,12 +16,14 @@ import logging
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from bot.config import BUMP_INTERVAL_DAYS, TIMEZONE, get_settings
+from bot.config import BUMP_INTERVAL_DAYS, TIMEZONE
 from bot.database import crud
 from bot.database.models import Client
 from bot.database.session import get_sessionmaker
 from bot.services import publisher
+from bot.services.ai_health import check_ai_outage
 from bot.services.backups import ship_latest_backup
+from bot.services.notify import notify_admins
 from bot.utils import timeutils
 
 logger = logging.getLogger(__name__)
@@ -41,7 +44,7 @@ async def auto_bump(bot: Bot) -> None:
             except Exception:  # noqa: BLE001
                 logger.exception("Не удалось поднять объект %s", prop.id)
     if bumped:
-        await _report_admins(bot, f"📢 Автоподнятие: поднято {bumped} объявлений.")
+        await notify_admins(bot, f"📢 Автоподнятие: поднято {bumped} объявлений.")
     logger.info("Автоподнятие: обработано %d", bumped)
 
 
@@ -74,7 +77,7 @@ async def remind(
 
             # Админам
             info = f"{client.name or '—'} ({client.phone or '—'})" if client else "—"
-            await _report_admins(
+            await notify_admins(
                 bot,
                 f"⏰ Напоминание ({human}): встреча {meeting.id}\n"
                 f"Клиент: {info}\nОбъект: {meeting.property_id} · {address}\nКогда: {when}",
@@ -87,16 +90,8 @@ async def remind(
 
 
 # ---------------------------------------------------------------------------
-# Утилиты и настройка
+# Настройка
 # ---------------------------------------------------------------------------
-async def _report_admins(bot: Bot, text: str) -> None:
-    for admin_id in get_settings().admin_ids:
-        try:
-            await bot.send_message(admin_id, text)
-        except Exception:  # noqa: BLE001
-            logger.debug("Не удалось отправить отчёт админу %s", admin_id)
-
-
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=TIMEZONE)
 
@@ -125,6 +120,10 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         ship_latest_backup, trigger="cron", hour=4, minute=10, args=[bot],
         id="ship_backup", replace_existing=True,
     )
+    scheduler.add_job(
+        check_ai_outage, trigger="interval", minutes=5, args=[bot],
+        id="ai_watchdog", replace_existing=True,
+    )
 
-    logger.info("Планировщик настроен: 5 задач (TZ=%s)", TIMEZONE)
+    logger.info("Планировщик настроен: 6 задач (TZ=%s)", TIMEZONE)
     return scheduler

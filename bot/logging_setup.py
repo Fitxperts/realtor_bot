@@ -42,8 +42,11 @@ def setup_logging() -> None:
     logging.getLogger("aiogram.event").setLevel(logging.WARNING)
 
 
-def init_sentry() -> bool:
-    """Инициализировать Sentry, если задан SENTRY_DSN и установлен sentry-sdk."""
+def init_sentry(service: str = "bot") -> bool:
+    """Инициализировать Sentry/GlitchTip, если задан SENTRY_DSN и установлен sentry-sdk.
+
+    service — тег события (bot / userbot): видно, какой процесс упал.
+    """
     dsn = os.getenv("SENTRY_DSN")
     if not dsn:
         return False
@@ -60,5 +63,6 @@ def init_sentry() -> bool:
         traces_sample_rate=float(os.getenv("SENTRY_TRACES_RATE", "0.0")),
         integrations=[LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)],
     )
-    logging.getLogger(__name__).info("Sentry инициализирован")
+    sentry_sdk.set_tag("service", service)
+    logging.getLogger(__name__).info("Sentry инициализирован (%s)", service)
     return True

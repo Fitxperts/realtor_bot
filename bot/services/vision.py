@@ -43,7 +43,7 @@ def _vision_specs(settings) -> list[ProviderSpec]:
 
 class VisionService:
     def __init__(self) -> None:
-        self.router = LLMRouter(_vision_specs(get_settings()))
+        self.router = LLMRouter(_vision_specs(get_settings()), label="vision")
 
     def is_enabled(self) -> bool:
         return self.router.enabled

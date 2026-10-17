@@ -69,7 +69,7 @@ class AIService:
     def __init__(self) -> None:
         # Цепочка провайдеров с автопереключением: упал один (снята модель, лимит,
         # сеть) — отвечает следующий. Офлайн-регулярки — только если упали ВСЕ.
-        self.router = LLMRouter(build_chain(get_settings()))
+        self.router = LLMRouter(build_chain(get_settings()), label="text")
 
     @property
     def enabled(self) -> bool:

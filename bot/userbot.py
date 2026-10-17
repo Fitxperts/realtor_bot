@@ -31,7 +31,7 @@ from bot.config import get_settings
 from bot.database import crud
 from bot.database.session import get_sessionmaker
 from bot.keyboards.admin_kb import moderation_kb
-from bot.logging_setup import setup_logging
+from bot.logging_setup import init_sentry, setup_logging
 from bot.net_session import RobustSession
 from bot.services import publisher
 from bot.services.ai_service import get_ai_service
@@ -242,6 +242,7 @@ def _src(event) -> str:  # noqa: ANN001
 
 
 if __name__ == "__main__":
+    init_sentry(service="userbot")
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
