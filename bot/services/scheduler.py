@@ -1,10 +1,11 @@
 """Планировщик фоновых задач (APScheduler).
 
-Четыре задачи:
+Пять задач:
 - автоподнятие активных объектов (ежедневно 10:00);
 - напоминание о встрече за день (ежечасно);
 - напоминание за 2 часа (каждые 15 минут);
-- напоминание за 30 минут (каждые 5 минут).
+- напоминание за 30 минут (каждые 5 минут);
+- копия ночного бэкапа базы в Telegram + тревога, если бэкапа нет (04:10).
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ from bot.database import crud
 from bot.database.models import Client
 from bot.database.session import get_sessionmaker
 from bot.services import publisher
+from bot.services.backups import ship_latest_backup
 from bot.utils import timeutils
 
 logger = logging.getLogger(__name__)
@@ -118,6 +120,11 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         args=[bot, dt.timedelta(0), dt.timedelta(minutes=30), "reminded_30m", "через 30 минут"],
         id="remind_30m", replace_existing=True,
     )
+    # Сервис backup делает дамп после 03:00 — к 04:10 он точно готов
+    scheduler.add_job(
+        ship_latest_backup, trigger="cron", hour=4, minute=10, args=[bot],
+        id="ship_backup", replace_existing=True,
+    )
 
-    logger.info("Планировщик настроен: 4 задачи (TZ=%s)", TIMEZONE)
+    logger.info("Планировщик настроен: 5 задач (TZ=%s)", TIMEZONE)
     return scheduler

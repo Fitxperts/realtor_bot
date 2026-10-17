@@ -102,6 +102,11 @@ class Settings:
         self.autorepost_max_photos: int = int(os.getenv("AUTOREPOST_MAX_PHOTOS", "10") or 10)
         self.media_dir: str = os.getenv("MEDIA_DIR", "/app/media").strip()
 
+        # Бэкапы: сервис backup (docker-compose) кладёт дампы в эту папку,
+        # бот каждое утро отправляет свежий в Telegram (копия вне сервера).
+        self.backup_dir: str = os.getenv("BACKUP_DIR", "/app/backups").strip()
+        self.backup_chat_id: int = int(os.getenv("BACKUP_CHAT_ID", "0") or 0)
+
         # Константы (дублируем на объекте настроек для удобного доступа)
         self.timezone: str = TIMEZONE
         self.bump_interval_days: int = BUMP_INTERVAL_DAYS

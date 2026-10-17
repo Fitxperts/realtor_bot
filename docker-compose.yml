@@ -10,6 +10,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./media:/app/media
+      - ./backups:/app/backups:ro   # бот только читает дампы и шлёт копию в Telegram
 
   db:
     image: postgres:16
@@ -26,6 +27,28 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  # Ночной бэкап базы: раз в сутки после 03:00, проверка дампа, хранение 14 дней.
+  # Ручной бэкап сейчас:   docker compose exec backup sh /backup.sh --once
+  # Восстановление:        sh scripts/restore_backup.sh backups/<файл>.dump
+  backup:
+    image: postgres:16             # та же версия, что у db — pg_dump совместим
+    entrypoint: ["sh", "/backup.sh"]
+    environment:
+      PGHOST: db
+      PGUSER: user
+      PGPASSWORD: password
+      PGDATABASE: realtor
+      TZ: Asia/Tashkent
+      BACKUP_HOUR: "3"
+      BACKUP_KEEP_DAYS: "14"
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine

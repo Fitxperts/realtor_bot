@@ -29,7 +29,7 @@ from bot.database.models import (
 )
 from bot.handlers.owner import begin_property_form
 from bot.keyboards import admin_kb
-from bot.services import export, matcher, publisher
+from bot.services import backups, export, matcher, publisher
 from bot.services.ai_service import get_ai_service
 from bot.services.transcribe import get_transcribe_service
 from bot.services.vision import get_vision_service
@@ -526,3 +526,19 @@ async def ai_models(message: Message, command: CommandObject) -> None:
     chunk = "\n".join(models[:80])
     more = f"\n… и ещё {len(models) - 80}" if len(models) > 80 else ""
     await message.answer(f"<b>{escape(name)}</b> — {len(models)} моделей:\n<code>{escape(chunk)}</code>{more}")
+
+
+# ---------------------------------------------------------------------------
+# Бэкапы базы
+# ---------------------------------------------------------------------------
+@router.message(Command("backup"))
+async def backup_now(message: Message, bot: Bot) -> None:
+    """Свежий бэкап базы — файлом в этот чат (проверка, что бэкапы живы)."""
+    result = await backups.ship_latest_backup(bot, chat_id=message.chat.id, force=True)
+    if result == "disabled":
+        await message.answer(
+            "Бэкапы не подключены: в контейнере нет папки с дампами.\n"
+            "Обнови сервер: <code>git pull && docker compose up -d --build</code> — "
+            "поднимется сервис <code>backup</code>."
+        )
+    # sent → файл уже в чате; error / stale / too_big → админам ушло предупреждение

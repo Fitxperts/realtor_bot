@@ -9,7 +9,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.fsm.storage.redis import RedisStorage
-from aiogram.types import BotCommand, ErrorEvent
+from aiogram.types import BotCommand, BotCommandScopeChat, ErrorEvent
 
 from bot.config import get_settings
 from bot.handlers import register_routers
@@ -26,9 +26,24 @@ _COMMANDS = [
     BotCommand(command="cancel", description="Отменить действие"),
     BotCommand(command="help", description="Помощь"),
 ]
+# Админам в меню дополнительно служебные команды (видят только они)
+_ADMIN_COMMANDS = _COMMANDS + [
+    BotCommand(command="ai_status", description="Проверка ИИ-провайдеров"),
+    BotCommand(command="ai_models", description="Модели провайдера: /ai_models groq"),
+    BotCommand(command="backup", description="Свежий бэкап базы файлом"),
+]
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
+
+async def _set_commands(bot: Bot, settings) -> None:
+    await bot.set_my_commands(_COMMANDS)
+    for admin_id in settings.admin_ids:
+        try:
+            await bot.set_my_commands(_ADMIN_COMMANDS, scope=BotCommandScopeChat(chat_id=admin_id))
+        except Exception as exc:  # noqa: BLE001 - админ ещё не писал боту
+            logger.warning("Меню админа %s не установлено: %s", admin_id, exc)
 
 
 def _register_error_handler(dp: Dispatcher, bot: Bot, settings) -> None:
@@ -79,7 +94,7 @@ async def _run_polling(settings) -> None:
     logger.info("РиелторБот запущен (polling)")
     try:
         await bot.delete_webhook(drop_pending_updates=True)
-        await bot.set_my_commands(_COMMANDS)
+        await _set_commands(bot, settings)
         # polling_timeout поменьше → быстрее восстановление после сетевого блипа
         await dp.start_polling(bot, polling_timeout=20)
     finally:
@@ -134,7 +149,7 @@ def _run_webhook(settings) -> None:
         for attempt in range(1, 8):
             try:
                 await _set_webhook(drop=True)
-                await bot.set_my_commands(_COMMANDS)
+                await _set_commands(bot, settings)
                 logger.info("РиелторБот запущен (webhook: %s)", webhook_url)
                 break
             except Exception as exc:  # noqa: BLE001
