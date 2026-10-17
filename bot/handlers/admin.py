@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import logging
 from html import escape
@@ -547,3 +548,45 @@ async def backup_now(message: Message, bot: Bot) -> None:
             "поднимется сервис <code>backup</code>."
         )
     # sent → файл уже в чате; error / stale / too_big → админам ушло предупреждение
+
+
+# ---------------------------------------------------------------------------
+# Контроль качества разбора: /ai_eval [N] [offline]
+# ---------------------------------------------------------------------------
+_eval_running: set[int] = set()
+
+
+@router.message(Command("ai_eval"))
+async def ai_eval(message: Message, command: CommandObject, bot: Bot) -> None:
+    """Прогнать контрольные объявления через ИИ и показать точность по полям."""
+    from bot.evals import run as evals
+
+    args = (command.args or "").lower().split()
+    offline = "offline" in args
+    limit = next((int(a) for a in args if a.isdigit()), None)
+    if _eval_running:
+        await message.answer("⏳ Проверка уже идёт — дождитесь результата.")
+        return
+    if not offline and not get_ai_service().enabled:
+        await message.answer("ИИ не настроен — нечего проверять. Офлайн-разбор: /ai_eval offline")
+        return
+    cases = evals.load_cases(limit)
+    await message.answer(f"🧪 Проверяю разбор на {len(cases)} объявлениях"
+                         f"{' (без ИИ)' if offline else ''}… Пришлю отчёт, обычно 1–2 минуты.")
+    task = asyncio.create_task(_run_eval(bot, message.chat.id, cases, offline))
+    _eval_running.add(message.chat.id)
+    task.add_done_callback(lambda _t: _eval_running.discard(message.chat.id))
+
+
+async def _run_eval(bot: Bot, chat_id: int, cases: list, offline: bool) -> None:
+    from bot.evals import run as evals
+
+    try:
+        parse = evals.offline_parse if offline else evals.ai_parse
+        report = await evals.evaluate(parse, cases)
+        model = None if offline else get_ai_service().router.last_provider
+        title = "Офлайн-разбор (без ИИ)" if offline else f"Разбор ИИ · {model or 'нет ответа'}"
+        await bot.send_message(chat_id, evals.format_report(report, title=title)[:4096])
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Ошибка /ai_eval")
+        await bot.send_message(chat_id, f"❌ Проверка не удалась: {escape(str(exc)[:300])}")

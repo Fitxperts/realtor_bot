@@ -151,6 +151,7 @@ class LLMRouter:
         # label ("text" / "vision") — под этим именем сторож ИИ (ai_health)
         # следит за сбоями цепочки; None — не отслеживать (тесты, временные).
         self.label = label
+        self.last_provider: str | None = None  # кто ответил последним («groq:openai/gpt-oss-120b»)
         self._live: list[_Live] = []
         for spec in specs:
             try:
@@ -206,6 +207,7 @@ class LLMRouter:
                 p.ok_count += 1
                 p.last_error = ""
                 p.cooldown_until = 0.0
+                self.last_provider = f"{p.spec.name}:{p.spec.model}"
                 self._report(ok=True)
                 return text
             except Exception as exc:  # noqa: BLE001 - любой сбой → следующий провайдер

@@ -32,6 +32,7 @@ _ADMIN_COMMANDS = _COMMANDS + [
     BotCommand(command="ai_status", description="Проверка ИИ-провайдеров"),
     BotCommand(command="ai_models", description="Модели провайдера: /ai_models groq"),
     BotCommand(command="backup", description="Свежий бэкап базы файлом"),
+    BotCommand(command="ai_eval", description="Проверка качества разбора (50 объявлений)"),
 ]
 
 setup_logging()

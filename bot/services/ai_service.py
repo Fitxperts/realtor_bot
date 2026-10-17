@@ -25,6 +25,7 @@ from bot.config import (
     PREMIUM_EMOJI,
     get_settings,
 )
+from bot.services import offline_parser
 from bot.services.llm_providers import LLMRouter, build_chain
 
 logger = logging.getLogger(__name__)
@@ -303,91 +304,10 @@ class AIService:
                     logger.warning("ИИ вернул невалидный JSON при разборе текста")
         return {}
 
-    # Стоп-слова (префиксы) для отсева служебных слов при поиске района.
-    # Русские + узбекская латиница + английские.
-    _STOPWORDS = {
-        # RU
-        "аренд", "ижара", "сдам", "сдается", "сдаётся", "продаж", "сотув",
-        "продам", "сотилади", "хозяин", "срочно", "комн", "хона", "сум", "сўм",
-        "дом", "квартира", "участок", "коммерч", "тижорат", "офис", "этаж", "кв",
-        "прода", "сдаё", "сдаю", "куп", "торг", "цена", "тел",
-        # UZ (latin)
-        "ijara", "sotuv", "sotil", "sotaman", "kvartira", "hovli", "uchastka",
-        "xona", "xonali", "egasi", "shoshilinch", "som", "sum", "uy", "yer",
-        "ofis", "tijorat", "qavat", "narx",
-        # EN
-        "rent", "sale", "owner", "room", "apartment", "house", "land",
-        "commercial", "floor",
-    }
-    _KIND_WORDS = (
-        ("apartment", ("квартир", "кв", "хона", "kvartira", "xona", "apartment")),
-        ("house", ("дом", "ҳовли", "уй", "hovli", "uy", "house")),
-        ("land", ("участок", "ер", "uchastka", "yer", "land")),
-        ("commercial", ("коммерч", "тижорат", "офис", "tijorat", "ofis", "commercial")),
-    )
-    _RENT_WORDS = ("аренд", "ижара", "сдам", "сдаё", "сдаю", "сдается", "ижарага",
-                   "ijara", "rent")
-    _SALE_WORDS = ("прода", "сотув", "сотил", "сотиш", "sotuv", "sotil",
-                   "sotaman", "sale")
-
-    @classmethod
-    def _parse_regex(cls, text: str) -> dict:
-        result: dict = {}
-
-        # Телефон — сначала номер с «+» (допускаем пробелы/скобки), иначе
-        # непрерывная последовательность 9–12 цифр. Так цену «65 000 000»
-        # (разбита пробелами по 3) не примем за телефон.
-        phone = re.search(r"\+\d[\d\s\-()]{7,}\d", text) or re.search(r"(?<!\d)\d{9,12}(?!\d)", text)
-        work = text
-        if phone:
-            result["phone"] = phone.group().strip()
-            work = text.replace(phone.group(), " ")
-        low = work.lower()
-
-        # Тип сделки (RU / UZ-latin / EN)
-        if any(w in low for w in cls._RENT_WORDS):
-            result["deal_type"] = "rent"
-        elif any(w in low for w in cls._SALE_WORDS):
-            result["deal_type"] = "sale"
-
-        # Вид объекта
-        for kind, words in cls._KIND_WORDS:
-            if any(w in low for w in words):
-                result["property_kind"] = kind
-                break
-
-        # Комнаты: "2к", "3 комн", "2-х", "2x", "3 xona", "2 xonali"
-        rooms = re.search(r"(\d+)\s*[-]?\s*(?:комн|хонали|хона|xonali|xona|к|x)", low)
-        if rooms:
-            result["rooms"] = int(rooms.group(1))
-
-        # Цена: наибольшее число, учитывая разряды через пробел («65 000 000»)
-        numbers: list[int] = []
-        for group in re.findall(r"\d[\d ]*\d|\d", low):
-            digits = group.replace(" ", "")
-            if digits.isdigit() and len(digits) <= 12:
-                numbers.append(int(digits))
-        if numbers:
-            result["price"] = float(max(numbers))
-        # Валюта: без этого «300$» уходило в канал как «300 сум»
-        if re.search(r"\$|usd|у\.\s?е|доллар|долл\b|dollar", low):
-            result["currency"] = "$"
-
-        # Этаж «3/5», «3/9 этаж», «4/5 qavat»: этаж/этажность
-        floor = re.search(r"(?<![\d/])(\d{1,2})\s*/\s*(\d{1,2})(?![\d/])(?!\s*(?:дол|ulush|qism))", low)
-        if floor and 0 < int(floor.group(1)) <= int(floor.group(2)) <= 40:
-            result["floor"], result["floors"] = int(floor.group(1)), int(floor.group(2))
-
-        # Район: первое подходящее слово (кириллица ИЛИ узбекская латиница),
-        # не начинающееся со стоп-слова.
-        for token in re.findall(r"[a-zа-яёўқғҳ][a-zа-яёўқғҳʻ’']{2,}", low):
-            clean = token.strip("ʻ’'")
-            if len(clean) < 3 or any(clean.startswith(sw) for sw in cls._STOPWORDS):
-                continue
-            result["district"] = clean.capitalize()
-            break
-
-        return result
+    @staticmethod
+    def _parse_regex(text: str) -> dict:
+        """Разбор без ИИ (запасной путь) — bot/services/offline_parser.py."""
+        return offline_parser.parse(text)
 
     # ------------------------------------------------------------------
     # 3. Умный подбор объектов под клиента

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 
-_USD_MARK = re.compile(r"\$|usd|у\.\s?е|доллар|долл\b|dollar|\bдол\b")
+_USD_MARK = re.compile(r"\$|usd|у\.\s?е|y\.\s?e|доллар|долл\b|dollar|бакс|\bдол\b")
 _SUM_MARK = re.compile(r"сум|сўм|so['ʻ’‘`]?m|\bsom\b|\bsum\b|uzs")
 _MULT = (
     (re.compile(r"млрд|mlrd|milliard"), 1_000_000_000),
