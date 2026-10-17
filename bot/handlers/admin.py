@@ -41,6 +41,7 @@ from bot.utils.formatters import (
     format_property_card,
     property_status_label,
 )
+from bot.utils.media import photo_input
 from bot.utils.validators import parse_int, parse_price
 
 logger = logging.getLogger(__name__)
@@ -150,9 +151,12 @@ async def _show_property(target: Message, prop: Property, kb, lang: str) -> None
     text = f"[{status}] " + format_property_card(prop, lang)
     photos = prop.photo_list
     if photos:
-        await target.answer_photo(photos[0], caption=text, reply_markup=kb)
-    else:
-        await target.answer(text, reply_markup=kb)
+        try:
+            await target.answer_photo(photo_input(photos[0]), caption=text[:1024], reply_markup=kb)
+            return
+        except Exception:  # noqa: BLE001 - битое/удалённое фото не должно ломать список
+            logger.warning("Фото объекта %s не отправилось — показываю без фото", prop.id)
+    await target.answer(text, reply_markup=kb)
 
 
 # --- действия с объектом ---

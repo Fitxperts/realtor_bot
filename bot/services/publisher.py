@@ -9,6 +9,7 @@ import logging
 
 from aiogram import Bot
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +21,7 @@ from bot.services.ai_service import get_ai_service
 from bot.services.watermark import watermark_photos
 from bot.utils import timeutils
 from bot.utils.formatters import format_property_card
+from bot.utils.media import photo_input
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +42,7 @@ def _prop_to_dict(prop: Property) -> dict:
         "electricity": prop.electricity,
         "internet": prop.internet,
         "price": prop.price,
+        "currency": prop.currency,
         "negotiable": prop.negotiable,
     }
 
@@ -174,7 +177,10 @@ async def _notify_matching_clients(bot: Bot, session: AsyncSession, prop: Proper
     for client in clients:
         try:
             if photos:
-                await bot.send_photo(client.telegram_id, photos[0], caption=text)
+                try:
+                    await bot.send_photo(client.telegram_id, photo_input(photos[0]), caption=text[:1024])
+                except TelegramBadRequest:  # битое фото — всё равно сообщаем текстом
+                    await bot.send_message(client.telegram_id, text)
             else:
                 await bot.send_message(client.telegram_id, text)
             sent += 1

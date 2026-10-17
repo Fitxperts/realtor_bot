@@ -22,6 +22,29 @@ def test_generate_description_no_broken_emoji():
     assert "\\." in text  # экранированные точки MarkdownV2
 
 
+def test_generate_description_dollar_price_and_brand():
+    """Цена в долларах не должна публиковаться как «сўм»; подвал — из настроек."""
+    from bot import config
+
+    text = get_ai_service().generate_description(
+        {"deal_type": "sale", "property_kind": "house", "district": "Qirguli",
+         "rooms": 4, "price": 45000, "currency": "$"}
+    )
+    assert "45 000 $" in text and "сўм" not in text
+    assert config.CHANNEL_URL in text and config.AGENCY_CONTACTS[0][0] in text.replace("\\+", "+")
+
+    no_price = get_ai_service().generate_description({"deal_type": "rent", "property_kind": "apartment"})
+    assert "*Нархи:* —" in no_price and "— сўм" not in no_price
+
+
+def test_parse_contacts():
+    from bot.config import _parse_contacts
+
+    assert _parse_contacts("+998901112233:@agent1, +998902223344:agent2") == [
+        ("+998901112233", "agent1"), ("+998902223344", "agent2")]
+    assert _parse_contacts("") == []
+
+
 @pytest.mark.parametrize(
     "text,expect",
     [

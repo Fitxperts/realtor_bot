@@ -7,13 +7,11 @@
 from __future__ import annotations
 
 import logging
-import os
 
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     CallbackQuery,
-    FSInputFile,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Message,
@@ -26,6 +24,7 @@ from bot.database.models import PropertyType
 from bot.handlers.client import begin_client_form
 from bot.handlers.lead import begin_lead
 from bot.utils.formatters import format_property_card
+from bot.utils.media import photo_input
 
 logger = logging.getLogger(__name__)
 router = Router(name="catalog")
@@ -49,11 +48,6 @@ def _card_kb(property_id: str, lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text=i18n.btn("lead_cta", lang), callback_data=f"{PREFIX}:lead:{property_id}")
     ]])
-
-
-def _photo_input(photo: str):
-    """Локальный путь (авто-репост) → FSInputFile, иначе file_id как есть."""
-    return FSInputFile(photo) if os.path.exists(photo) else photo
 
 
 # --- Вход: кнопка меню «Объявления» или инлайн «Смотреть объявления» ---------
@@ -113,7 +107,7 @@ async def _show_batch(
         photos = prop.photo_list
         try:
             if photos:
-                await message.answer_photo(_photo_input(photos[0]), caption=caption, reply_markup=kb)
+                await message.answer_photo(photo_input(photos[0]), caption=caption, reply_markup=kb)
             else:
                 await message.answer(caption, reply_markup=kb)
         except Exception:  # noqa: BLE001 - битое фото не должно рвать выдачу

@@ -19,6 +19,7 @@ import re
 
 from bot.config import (
     AGENCY_CONTACTS,
+    AGENCY_NAME,
     BOT_PUBLISH_URL,
     CHANNEL_URL,
     PREMIUM_EMOJI,
@@ -137,8 +138,10 @@ class AIService:
         lines.append("")
 
         price = escape_md(_fmt_price(d.get("price")))
+        if price != "—":
+            price += " $" if d.get("currency") == "$" else " сўм"
         neg = " \\(келишилади\\)" if d.get("negotiable") else ""
-        lines.append(f"{em('💰', 'money')} *Нархи:* {price} сўм{neg}\\.")
+        lines.append(f"{em('💰', 'money')} *Нархи:* {price}{neg}\\.")
         lines.append("_\\*Риэлторлик хизмати алоҳида\\._")
         lines.append("")
 
@@ -152,7 +155,7 @@ class AIService:
         lines.append("")
 
         lines.append("➖➖➖➖➖➖➖➖➖➖")
-        lines.append(f"📢 [«Фарғона Уйлари» каналига обуна бўлинг]({CHANNEL_URL})")
+        lines.append(f"📢 [«{escape_md(AGENCY_NAME)}» каналига обуна бўлинг]({CHANNEL_URL})")
         lines.append(f"📥 [Ботда бепул эълон жойлаш]({BOT_PUBLISH_URL})")
         return "\n".join(lines)
 

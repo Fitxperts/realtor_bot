@@ -26,15 +26,29 @@ PREMIUM_EMOJI = {
     "phone": "0",      # 📞 телефон
 }
 
-# Контакты агентства (номер, username) — отображаются в спойлере
-AGENCY_CONTACTS = [
+
+def _parse_contacts(raw: str) -> list[tuple[str, str]]:
+    """'+998901234567:username,+998…:user2' → [(телефон, username), …]."""
+    out = []
+    for part in raw.split(","):
+        phone, _, username = part.strip().partition(":")
+        if phone.strip():
+            out.append((phone.strip(), username.strip().lstrip("@")))
+    return out
+
+
+# Бренд агентства в постах канала. Значения по умолчанию — агентство MADAD
+# (Фергана); другое агентство или демо-бот переопределяет их в .env.
+AGENCY_NAME = os.getenv("AGENCY_NAME", "Фарғона Уйлари").strip()
+# Контакты агентства (номер, username) — в каждом посте канала
+AGENCY_CONTACTS = _parse_contacts(os.getenv("AGENCY_CONTACTS", "")) or [
     ("+998916993133", "Aziko_3133"),
     ("+998930866466", "Bek_6466"),
 ]
 
 # Ссылки в подвале объявления
-CHANNEL_URL = "https://t.me/fargona_UYJOY0"
-BOT_PUBLISH_URL = "https://t.me/fargona_realtor_bot?start=add"
+CHANNEL_URL = os.getenv("CHANNEL_URL", "https://t.me/fargona_UYJOY0").strip()
+BOT_PUBLISH_URL = os.getenv("BOT_PUBLISH_URL", "https://t.me/fargona_realtor_bot?start=add").strip()
 
 # Водяной знак на фото при публикации в канал (пусто → выключен).
 # Можно переопределить переменной окружения WATERMARK_TEXT.

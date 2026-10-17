@@ -36,6 +36,7 @@ from bot.services.transcribe import get_transcribe_service
 from bot.services.vision import get_vision_service
 from bot.states.owner_states import OwnerForm
 from bot.utils.formatters import format_property_brief, format_property_card
+from bot.utils.media import photo_input
 from bot.utils.validators import is_valid_phone, parse_price
 
 logger = logging.getLogger(__name__)
@@ -435,7 +436,7 @@ async def _notify_admins(bot: Bot, prop: Property) -> None:
     for admin_id in get_settings().admin_ids:
         try:
             if photos:
-                await bot.send_photo(admin_id, photo=photos[0], caption=text, reply_markup=kb)
+                await bot.send_photo(admin_id, photo=photo_input(photos[0]), caption=text[:1024], reply_markup=kb)
             else:
                 await bot.send_message(admin_id, text, reply_markup=kb)
         except Exception:  # noqa: BLE001 - админ мог не запускать бота
