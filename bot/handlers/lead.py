@@ -27,6 +27,7 @@ from bot.config import get_settings
 from bot.database import crud
 from bot.database.models import ClientDealType, PropertyType
 from bot.handlers import demo
+from bot.services import analytics
 from bot.states.lead_states import LeadForm
 from bot.utils.formatters import format_property_brief, format_property_card
 from bot.utils.validators import is_valid_phone
@@ -54,6 +55,7 @@ async def begin_lead(
         await message.answer(i18n.t("lead_not_found", lang))
         return
 
+    await analytics.track("lead_click", telegram_id=actor.id, property_id=prop.id)
     await message.answer(i18n.t("lead_intro", lang) + "\n\n" + format_property_card(prop, lang))
     await state.set_state(LeadForm.phone)
     await state.update_data(lead_property_id=property_id)
@@ -109,6 +111,7 @@ async def _finish_lead(
             f"Клиент: {escape(client.id)} · {escape(client.name or '—')} · 📞 {escape(phone)}"
         )
         await _notify_admins(bot, admin_text)
+        await analytics.track("lead", telegram_id=message.from_user.id, property_id=prop.id)
 
     await message.answer(i18n.t("lead_thanks", lang), reply_markup=ReplyKeyboardRemove())
     if prop is not None and get_settings().demo_mode:

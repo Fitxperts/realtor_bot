@@ -20,7 +20,7 @@ from bot.config import get_settings
 from bot.database import crud
 from bot.database.models import ClientDealType
 from bot.keyboards import client_kb
-from bot.services import matcher
+from bot.services import analytics, matcher
 from bot.states.client_states import ClientForm
 from bot.utils.formatters import format_client_card, format_money, format_property_card
 from bot.utils.money import parse_money
@@ -179,6 +179,7 @@ async def confirm_save(
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.message.answer(i18n.t("request_accepted", lang))
     await callback.message.answer(i18n.t("sub_enabled", lang))
+    await analytics.track("request", telegram_id=callback.from_user.id)
     await callback.answer()
 
     # Уведомление администратору (на русском — панель оператора)

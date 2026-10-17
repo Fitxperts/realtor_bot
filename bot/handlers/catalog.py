@@ -23,6 +23,7 @@ from bot.database import crud
 from bot.database.models import PropertyType
 from bot.handlers.client import begin_client_form
 from bot.handlers.lead import begin_lead
+from bot.services import analytics
 from bot.utils.formatters import format_property_card
 from bot.utils.media import photo_input
 
@@ -113,6 +114,7 @@ async def _show_batch(
         except Exception:  # noqa: BLE001 - битое фото не должно рвать выдачу
             await message.answer(caption, reply_markup=kb)
 
+    await analytics.track_many("catalog_view", [p.id for p in page], telegram_id=message.chat.id)
     shown = offset + len(page)
     if shown < total:
         await message.answer(

@@ -33,7 +33,7 @@ from bot.database.session import get_sessionmaker
 from bot.keyboards.admin_kb import moderation_kb
 from bot.logging_setup import init_sentry, setup_logging
 from bot.net_session import RobustSession
-from bot.services import publisher
+from bot.services import analytics, publisher
 from bot.services.ai_service import get_ai_service
 from bot.services.autorepost import content_key, looks_like_listing, to_property_fields
 from bot.services.duplicate_checker import check_duplicates
@@ -132,6 +132,7 @@ class AutoReposter:
 
             prop = await crud.create_property(session, **fields)
             logger.info("Авто-репост: создан %s из %s (%d фото)", prop.id, source, len(paths))
+            await analytics.track("listing_import", property_id=prop.id)
 
             if self._settings.autorepost_mode == "auto":
                 await publisher.publish_property(self._bot, session, prop.id)

@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot import i18n
 from bot.config import get_settings
 from bot.database.models import BotUser, Client, Property, SearchAlert
-from bot.services import matcher
+from bot.services import analytics, matcher
 from bot.utils import timeutils
 from bot.utils.formatters import format_property_card
 from bot.utils.media import photo_input
@@ -88,6 +88,7 @@ async def send_property_alerts(bot: Bot, session: AsyncSession, prop: Property) 
         if await _deliver(bot, prop, client, await _language(session, tg)):
             session.add(SearchAlert(telegram_id=tg, client_id=client.id, property_id=prop.id))
             await session.commit()
+            await analytics.track("alert_sent", telegram_id=tg, property_id=prop.id)
             sent += 1
     if sent:
         logger.info("Объект %s: уведомлено по подпискам %d", prop.id, sent)

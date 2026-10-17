@@ -29,7 +29,7 @@ from bot.database.models import (
 )
 from bot.handlers.owner import begin_property_form
 from bot.keyboards import admin_kb
-from bot.services import backups, export, matcher, publisher
+from bot.services import analytics, backups, export, matcher, publisher
 from bot.services.ai_service import get_ai_service
 from bot.services.transcribe import get_transcribe_service
 from bot.services.vision import get_vision_service
@@ -449,6 +449,7 @@ async def statistics(message: Message, session: AsyncSession, lang: str) -> None
         f"{i18n.t('st_need_bump', lang)}: {len(due)}",
     ]
     await message.answer("\n".join(lines), reply_markup=admin_kb.export_kb(lang))
+    await message.answer(await analytics.activity_report(session, lang))
 
 
 @router.callback_query(F.data.startswith(f"{P}:export:"))

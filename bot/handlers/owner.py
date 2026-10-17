@@ -31,7 +31,7 @@ from bot.database.models import (
 from bot.handlers import demo
 from bot.keyboards import owner_kb
 from bot.keyboards.admin_kb import moderation_kb
-from bot.services import duplicate_checker
+from bot.services import analytics, duplicate_checker
 from bot.services.ai_service import get_ai_service
 from bot.services.transcribe import get_transcribe_service
 from bot.services.vision import get_vision_service
@@ -402,6 +402,7 @@ async def _save_property(
         video=data.get("video"),
     )
     await state.clear()
+    await analytics.track("listing", telegram_id=callback.from_user.id, property_id=prop.id)
 
     await callback.message.edit_reply_markup(reply_markup=None)
     if settings.demo_mode:

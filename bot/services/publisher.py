@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.config import get_settings
 from bot.database import crud
 from bot.database.models import Property, PropertyStatus, PropertyType
+from bot.services import analytics
 from bot.services.ai_service import get_ai_service
 from bot.services.watermark import watermark_photos
 from bot.utils import timeutils
@@ -157,6 +158,7 @@ async def publish_property(bot: Bot, session: AsyncSession, property_id: str) ->
     prop.last_bump = timeutils.now()
     await session.commit()
     logger.info("Объект %s опубликован (post=%s)", prop.id, post_id)
+    await analytics.track("published", property_id=prop.id)
 
     await _notify_matching_clients(bot, session, prop)
     return prop

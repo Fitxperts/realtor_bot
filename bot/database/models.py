@@ -6,6 +6,7 @@
 - meetings      — встречи и просмотры
 - bot_users     — пользователи бота
 - search_alerts — какие объекты уже присланы по подпискам (без повторов, лимит в день)
+- events        — события для аналитики (просмотры, клики «заявка», заявки, публикации)
 """
 from __future__ import annotations
 
@@ -234,3 +235,15 @@ class SearchAlert(Base):
     client_id: Mapped[str] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"), index=True)
     property_id: Mapped[str] = mapped_column(ForeignKey("properties.id", ondelete="CASCADE"), index=True)
     sent_at: Mapped[dt.datetime] = mapped_column(DateTime(), default=timeutils.now, index=True)
+
+
+class Event(Base):
+    """Событие для аналитики агентства. Без внешних ключей: статистика переживает удаление объекта."""
+
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    type: Mapped[str] = mapped_column(String(32), index=True)
+    telegram_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    property_id: Mapped[str | None] = mapped_column(String(20), index=True)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(), default=timeutils.now, index=True)
