@@ -24,6 +24,7 @@ from bot.config import (
     PREMIUM_EMOJI,
     get_settings,
 )
+from bot.services.llm_providers import LLMRouter, build_chain
 
 logger = logging.getLogger(__name__)
 
@@ -66,65 +67,21 @@ def _fmt_price(value) -> str:
 
 class AIService:
     def __init__(self) -> None:
-        settings = get_settings()
-        self._model = settings.ai_model
-        self._client = None
-        self._backend: str | None = None  # "openai" | "anthropic" | None
-        try:
-            if settings.llm_base_url:
-                # Любой OpenAI-совместимый провайдер: Groq / Gemini / DeepSeek / …
-                from openai import AsyncOpenAI
+        # Цепочка провайдеров с автопереключением: упал один (снята модель, лимит,
+        # сеть) — отвечает следующий. Офлайн-регулярки — только если упали ВСЕ.
+        self.router = LLMRouter(build_chain(get_settings()))
 
-                # Ключ: LLM_API_KEY, иначе — по провайдеру из GEMINI/GROQ_API_KEY.
-                key = settings.llm_api_key
-                if not key and "generativelanguage.googleapis.com" in settings.llm_base_url:
-                    key = settings.gemini_api_key
-                elif not key and "api.groq.com" in settings.llm_base_url:
-                    key = settings.groq_api_key
-                if not key:
-                    logger.warning("LLM_BASE_URL задан, но ключа нет "
-                                   "(LLM_API_KEY / GEMINI_API_KEY / GROQ_API_KEY)")
-                self._client = AsyncOpenAI(api_key=key or "not-needed", base_url=settings.llm_base_url)
-                self._backend = "openai"
-                logger.info("LLM: OpenAI-совместимый провайдер, модель %s", self._model)
-            elif settings.anthropic_api_key:
-                from anthropic import AsyncAnthropic
-
-                self._client = AsyncAnthropic(api_key=settings.anthropic_api_key)
-                self._backend = "anthropic"
-                logger.info("LLM: Anthropic, модель %s", self._model)
-            else:
-                logger.warning("LLM не настроен — офлайн-режим (разбор регулярками)")
-        except Exception as exc:  # noqa: BLE001 - библиотека/сеть недоступны
-            logger.warning("LLM SDK недоступен (%s: %s), используются офлайн-режимы",
-                           type(exc).__name__, exc)
-            self._client = None
-            self._backend = None
+    @property
+    def enabled(self) -> bool:
+        return self.router.enabled
 
     async def _chat(self, prompt: str, *, system: str | None = None, max_tokens: int = 500) -> str | None:
-        """Единый вызов LLM независимо от провайдера. None — если ИИ недоступен/ошибка."""
-        if self._client is None:
-            return None
-        try:
-            if self._backend == "openai":
-                messages = []
-                if system:
-                    messages.append({"role": "system", "content": system})
-                messages.append({"role": "user", "content": prompt})
-                resp = await self._client.chat.completions.create(
-                    model=self._model, max_tokens=max_tokens, messages=messages,
-                )
-                return (resp.choices[0].message.content or "").strip()
-            # anthropic
-            kwargs = {"model": self._model, "max_tokens": max_tokens,
-                      "messages": [{"role": "user", "content": prompt}]}
-            if system:
-                kwargs["system"] = system
-            resp = await self._client.messages.create(**kwargs)
-            return "".join(getattr(b, "text", "") for b in resp.content).strip()
-        except Exception:  # noqa: BLE001 - сеть/лимиты/битый ответ → уходим в офлайн
-            logger.exception("Ошибка вызова LLM")
-            return None
+        """Единый вызов LLM по цепочке провайдеров. None — если ИИ недоступен."""
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        return await self.router.complete(messages, max_tokens=max_tokens)
 
     # ------------------------------------------------------------------
     # 1. Готовое объявление (строгий формат, MarkdownV2)
@@ -216,7 +173,7 @@ class AIService:
     # 2. Разбор свободного текста собственника
     # ------------------------------------------------------------------
     async def parse_free_text(self, text: str) -> dict:
-        if self._client is not None:
+        if self.enabled:
             parsed = await self._parse_with_ai(text)
             if parsed:
                 return parsed
@@ -237,7 +194,7 @@ class AIService:
         (своё или готовое объявление партнёра), бот сам извлекает поля и
         оформляет. При недоступности ИИ — офлайн-разбор регулярками.
         """
-        if self._client is not None:
+        if self.enabled:
             data = await self._listing_with_ai(text)
             if data:
                 return data

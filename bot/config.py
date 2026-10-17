@@ -69,6 +69,10 @@ class Settings:
         self.llm_api_key: str = os.getenv("LLM_API_KEY", "").strip()
         self.anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "").strip()
         self.ai_model: str = os.getenv("AI_MODEL", "claude-opus-4-8")
+        # Явная цепочка резервных провайдеров «провайдер[:модель]» через запятую,
+        # напр. groq:openai/gpt-oss-120b,gemini,openrouter. Пусто → собирается сама
+        # из доступных ключей (см. bot/services/llm_providers.py).
+        self.llm_chain: list[str] = [x.strip() for x in os.getenv("LLM_CHAIN", "").split(",") if x.strip()]
 
         # Vision (распознавание объявлений со скринов) — Google Gemini,
         # OpenAI-совместимый эндпоинт. Если ключ пуст — функция просто выключена.

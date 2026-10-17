@@ -155,7 +155,37 @@ def _run_webhook(settings) -> None:
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
+    async def health(_request) -> web.Response:
+        """/health для Uptime Kuma: 200 — всё ок; 503 — вебхук слетел или БД недоступна."""
+        from sqlalchemy import text
+
+        from bot.database.session import get_sessionmaker
+
+        status: dict = {"bot": "ok"}
+        code = 200
+        try:
+            info = await bot.get_webhook_info()
+            status["webhook_ok"] = (info.url or "") == webhook_url
+            status["pending_updates"] = info.pending_update_count
+            if info.last_error_message:
+                status["telegram_last_error"] = info.last_error_message
+            if not status["webhook_ok"]:
+                code = 503
+        except Exception as exc:  # noqa: BLE001
+            status["webhook_ok"] = False
+            status["telegram_error"] = type(exc).__name__
+            code = 503
+        try:
+            async with get_sessionmaker()() as s:
+                await s.execute(text("SELECT 1"))
+            status["db"] = "ok"
+        except Exception as exc:  # noqa: BLE001
+            status["db"] = type(exc).__name__
+            code = 503
+        return web.json_response(status, status=code)
+
     app = web.Application()
+    app.router.add_get("/health", health)
     SimpleRequestHandler(dispatcher=dp, bot=bot, secret_token=secret).register(
         app, path=settings.webhook_path
     )

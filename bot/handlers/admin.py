@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+from html import escape
 
 from aiogram import Bot, F, Router
-from aiogram.filters import BaseFilter, CommandStart
+from aiogram.filters import BaseFilter, Command, CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +30,9 @@ from bot.database.models import (
 from bot.handlers.owner import begin_property_form
 from bot.keyboards import admin_kb
 from bot.services import export, matcher, publisher
+from bot.services.ai_service import get_ai_service
+from bot.services.transcribe import get_transcribe_service
+from bot.services.vision import get_vision_service
 from bot.states.admin_states import EditProperty, ScheduleMeeting
 from bot.utils import timeutils
 from bot.utils.formatters import (
@@ -473,3 +477,52 @@ async def _notify_owner(bot: Bot, session: AsyncSession, prop: Property, msg_key
         await bot.send_message(prop.owner_telegram_id, i18n.t(msg_key, owner_lang, **kwargs))
     except Exception:  # noqa: BLE001 - собственник мог заблокировать бота
         logger.debug("Не удалось уведомить собственника %s", prop.owner_telegram_id)
+
+
+# ---------------------------------------------------------------------------
+# Диагностика ИИ-провайдеров (чтобы снятие модели не стоило дней поиска)
+# ---------------------------------------------------------------------------
+@router.message(Command("ai_status"))
+async def ai_status(message: Message) -> None:
+    """Живой тест каждого провайдера цепочки: текст, Vision, голос."""
+    await message.answer("🔎 Проверяю ИИ-провайдеров…")
+    lines = ["<b>🧠 Текст (разбор объявлений)</b>"]
+    text_router = get_ai_service().router
+    if not text_router.enabled:
+        lines.append("❌ не настроен — работает офлайн-разбор (регулярки)")
+    for r in await text_router.probe():
+        mark = "✅" if r["ok"] else "❌"
+        tail = f" — {r['ms']} мс" if r["ok"] else f" — {escape(r['error'])}"
+        lines.append(f"{mark} {r['name']}: <code>{escape(r['model'])}</code>{tail}")
+
+    lines.append("\n<b>🖼 Vision (скрины)</b>")
+    vis = get_vision_service().router
+    if not vis.enabled:
+        lines.append("— выключено (нет GEMINI_API_KEY)")
+    for r in await vis.probe():
+        mark = "✅" if r["ok"] else "❌"
+        tail = f" — {r['ms']} мс" if r["ok"] else f" — {escape(r['error'])}"
+        lines.append(f"{mark} {r['name']}: <code>{escape(r['model'])}</code>{tail}")
+
+    stt = get_transcribe_service()
+    lines.append("\n<b>🎧 Голос</b>")
+    lines.append("✅ включён" if stt.is_enabled() else "— выключен (нет ELEVENLABS_API_KEY / GROQ_API_KEY)")
+    lines.append("\nЕсли модель ❌ «not found» — посмотри актуальные: /ai_models groq | gemini | openrouter")
+    await message.answer("\n".join(lines))
+
+
+@router.message(Command("ai_models"))
+async def ai_models(message: Message, command: CommandObject) -> None:
+    """Список реально доступных моделей провайдера — не угадываем имена."""
+    name = (command.args or "").strip().lower()
+    if not name:
+        await message.answer("Использование: /ai_models groq | gemini | openrouter | deepseek | cerebras | mistral")
+        return
+    try:
+        models = await get_ai_service().router.list_models(name)
+    except Exception as exc:  # noqa: BLE001
+        await message.answer(f"❌ {escape(str(exc)[:300])}")
+        return
+    chunk = "\n".join(models[:80])
+    more = f"\n… и ещё {len(models) - 80}" if len(models) > 80 else ""
+    await message.answer(f"<b>{escape(name)}</b> — {len(models)} моделей:\n<code>{escape(chunk)}</code>{more}")
