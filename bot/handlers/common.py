@@ -23,6 +23,7 @@ from aiogram.types import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
+from bot.agency_config import cfg
 from bot.config import get_settings
 from bot.database import crud
 from bot.database.models import BotUser, UserRole
@@ -30,6 +31,7 @@ from bot.handlers import demo
 from bot.handlers.client import begin_client_form
 from bot.handlers.owner import begin_property_form
 from bot.keyboards import common_kb
+from bot.services.notify import notify_admins
 from bot.states.support_states import SupportForm
 from bot.utils.formatters import format_property_card, property_status_label
 
@@ -192,14 +194,14 @@ async def support_receive(message: Message, state: FSMContext, bot: Bot, lang: s
         f"{escape(message.text)}\n\n"
         f"Ответить: <code>/reply {user.id} ваш текст</code>"
     )
-    await _notify_admins(bot, admin_text)
+    await notify_admins(bot, admin_text)
     await message.answer(i18n.t("support_sent", lang))
 
 
 @router.message(Command("reply"))
 async def cmd_reply(message: Message, session: AsyncSession, bot: Bot) -> None:
     """Ответ администратора пользователю: /reply <telegram_id> <текст>."""
-    if not get_settings().is_admin(message.from_user.id):
+    if not cfg().is_admin(message.from_user.id):
         return
     parts = (message.text or "").split(maxsplit=2)
     if len(parts) < 3 or not parts[1].isdigit():
@@ -221,7 +223,7 @@ async def cmd_reply(message: Message, session: AsyncSession, bot: Bot) -> None:
 # ---------------------------------------------------------------------------
 @router.message(StateFilter(None), F.text & ~F.text.startswith("/") & ~F.text.in_(_MENU_TEXTS))
 async def first_touch(message: Message, session: AsyncSession, lang: str) -> None:
-    if get_settings().is_admin(message.from_user.id):
+    if cfg().is_admin(message.from_user.id):
         return
     user = await _ensure_user(message, session)
     if not user.language:
@@ -241,7 +243,7 @@ async def _ensure_user(message: Message, session: AsyncSession) -> BotUser:
         message.from_user.id,
         username=message.from_user.username,
         full_name=message.from_user.full_name,
-        is_admin=get_settings().is_admin(message.from_user.id),
+        is_admin=cfg().is_admin(message.from_user.id),
     )
 
 
@@ -268,11 +270,3 @@ async def _open_menu(message: Message, role: UserRole, lang: str) -> None:
         await message.answer(i18n.t("owner_menu_title", lang), reply_markup=common_kb.owner_menu(lang))
     else:
         await message.answer(i18n.t("client_menu_title", lang), reply_markup=common_kb.client_menu(lang))
-
-
-async def _notify_admins(bot: Bot, text: str) -> None:
-    for admin_id in get_settings().admin_ids:
-        try:
-            await bot.send_message(admin_id, text)
-        except Exception:  # noqa: BLE001
-            logger.debug("Не удалось уведомить админа %s", admin_id)

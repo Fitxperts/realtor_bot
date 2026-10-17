@@ -19,7 +19,8 @@ from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
-from bot.config import BUMP_INTERVAL_DAYS, get_settings
+from bot.agency_config import cfg
+from bot.config import BUMP_INTERVAL_DAYS
 from bot.database import crud
 from bot.database.models import (
     ClientStatus,
@@ -60,7 +61,7 @@ BTN_LANGUAGE = i18n.btn_variants("language")
 class IsAdmin(BaseFilter):
     async def __call__(self, event: Message | CallbackQuery) -> bool:
         user = event.from_user
-        return bool(user and get_settings().is_admin(user.id))
+        return bool(user and cfg().is_admin(user.id))
 
 
 router = Router(name="admin")

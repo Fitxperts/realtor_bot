@@ -18,6 +18,7 @@ from aiogram import Bot
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.agency_config import cfg
 from bot.config import get_settings
 from bot.database.models import (
     Client,
@@ -287,7 +288,7 @@ async def ensure_seed(session: AsyncSession) -> int:
 
 async def reset_demo(bot: Bot) -> dict:
     """Ночной сброс: удалить всё, что создали посетители, и восстановить примеры."""
-    channel = get_settings().channel_id
+    channel = cfg().channel_id
     async with get_sessionmaker()() as session:
         visitor_props = list(await session.scalars(select(Property).where(Property.id.not_in(SEED_IDS))))
         for prop in visitor_props:
@@ -312,7 +313,7 @@ async def publish_missing(bot: Bot, *, pause: float | None = None) -> int:
     """Опубликовать в демо-канал примеры, у которых ещё нет поста (первый запуск)."""
     from bot.services import publisher
 
-    if not get_settings().channel_id:
+    if not cfg().channel_id:
         return 0
     published = 0
     async with get_sessionmaker()() as session:

@@ -21,7 +21,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
-from bot.config import get_settings
+from bot.agency_config import cfg
 from bot.database import crud
 from bot.database.models import Property, PropertyStatus
 from bot.database.session import get_sessionmaker
@@ -50,7 +50,7 @@ async def _lang(session: AsyncSession, telegram_id: int) -> str:
 
 
 def _recipients(prop: Property) -> list[int]:
-    return [prop.owner_telegram_id] if prop.owner_telegram_id else list(get_settings().admin_ids)
+    return [prop.owner_telegram_id] if prop.owner_telegram_id else list(cfg().admin_ids)
 
 
 async def ask_owners(bot: Bot, session: AsyncSession) -> int:

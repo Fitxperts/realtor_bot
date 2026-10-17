@@ -11,6 +11,7 @@ from aiogram.exceptions import TelegramNetworkError
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import BotCommand, BotCommandScopeChat, ErrorEvent
 
+from bot.agency_config import cfg
 from bot.config import get_settings
 from bot.handlers import register_routers
 from bot.logging_setup import init_sentry, setup_logging
@@ -41,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 async def _set_commands(bot: Bot, settings) -> None:
     await bot.set_my_commands(_COMMANDS)
-    for admin_id in settings.admin_ids:
+    for admin_id in cfg().admin_ids:  # админы агентства этого бота
         try:
             await bot.set_my_commands(_ADMIN_COMMANDS, scope=BotCommandScopeChat(chat_id=admin_id))
         except Exception as exc:  # noqa: BLE001 - админ ещё не писал боту

@@ -19,6 +19,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
+from bot.agency_config import cfg
 from bot.config import get_settings
 from bot.database import crud
 from bot.database.models import (
@@ -33,6 +34,7 @@ from bot.keyboards import owner_kb
 from bot.keyboards.admin_kb import moderation_kb
 from bot.services import analytics, duplicate_checker
 from bot.services.ai_service import get_ai_service
+from bot.services.notify import notify_admins
 from bot.services.transcribe import get_transcribe_service
 from bot.services.vision import get_vision_service
 from bot.states.owner_states import OwnerForm
@@ -76,9 +78,9 @@ async def cmd_add(message: Message, state: FSMContext, session: AsyncSession, la
         message.from_user.id,
         username=message.from_user.username,
         full_name=message.from_user.full_name,
-        is_admin=get_settings().is_admin(message.from_user.id),
+        is_admin=cfg().is_admin(message.from_user.id),
     )
-    if not get_settings().is_admin(message.from_user.id):
+    if not cfg().is_admin(message.from_user.id):
         await crud.set_user_role(session, message.from_user.id, UserRole.owner)
     await begin_property_form(message, state, lang)
 
@@ -345,7 +347,7 @@ async def confirm_save(
             i18n.t("dup_warning", lang, brief=brief),
             reply_markup=owner_kb.dup_confirm_kb(lang),
         )
-        await _notify_admins_text(bot, "⚠️ Возможный дубль при добавлении объекта:\n" + brief)
+        await notify_admins(bot, "⚠️ Возможный дубль при добавлении объекта:\n" + brief)
         await callback.answer()
         return
 
@@ -450,19 +452,11 @@ def _build_preview(data: dict) -> Property:
     )
 
 
-async def _notify_admins_text(bot: Bot, text: str) -> None:
-    for admin_id in get_settings().admin_ids:
-        try:
-            await bot.send_message(admin_id, text)
-        except Exception:  # noqa: BLE001
-            logger.debug("Не удалось уведомить админа %s", admin_id)
-
-
 async def _notify_admins(bot: Bot, prop: Property) -> None:
     text = "🆕 <b>Объект на модерацию</b>\n\n" + format_property_card(prop)
     kb = moderation_kb(prop.id)
     photos = prop.photo_list
-    for admin_id in get_settings().admin_ids:
+    for admin_id in cfg().admin_ids:
         try:
             if photos:
                 await bot.send_photo(admin_id, photo=photo_input(photos[0]), caption=text[:1024], reply_markup=kb)

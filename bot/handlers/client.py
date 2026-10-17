@@ -16,11 +16,11 @@ from aiogram.types import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
-from bot.config import get_settings
 from bot.database import crud
 from bot.database.models import ClientDealType
 from bot.keyboards import client_kb
 from bot.services import analytics, matcher
+from bot.services.notify import notify_admins
 from bot.states.client_states import ClientForm
 from bot.utils.formatters import format_client_card, format_money, format_property_card
 from bot.utils.money import parse_money
@@ -183,7 +183,7 @@ async def confirm_save(
     await callback.answer()
 
     # Уведомление администратору (на русском — панель оператора)
-    await _notify_admins(bot, format_client_card(client))
+    await notify_admins(bot, format_client_card(client))
 
     # Подходящие объекты
     matches = await matcher.find_for_client(session, client)
@@ -220,7 +220,7 @@ async def pick_slot(callback: CallbackQuery, bot: Bot, lang: str) -> None:
 
     who = escape(callback.from_user.full_name or "")
     username = f" (@{escape(callback.from_user.username)})" if callback.from_user.username else ""
-    await _notify_admins(bot, f"📞 Клиент {who}{username} просит звонок в <b>{slot}</b>.")
+    await notify_admins(bot, f"📞 Клиент {who}{username} просит звонок в <b>{slot}</b>.")
 
 
 # ---------------------------------------------------------------------------
@@ -242,11 +242,3 @@ def _preview_card(data: dict, lang: str) -> str:
         f"{i18n.t('preview_phone', lang)}: {esc(data.get('phone'))}",
     ]
     return "\n".join(lines)
-
-
-async def _notify_admins(bot: Bot, text: str) -> None:
-    for admin_id in get_settings().admin_ids:
-        try:
-            await bot.send_message(admin_id, text)
-        except Exception:  # noqa: BLE001 - админ мог не запускать бота
-            logger.debug("Не удалось уведомить админа %s", admin_id)

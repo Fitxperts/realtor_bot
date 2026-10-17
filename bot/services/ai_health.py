@@ -20,7 +20,7 @@ from html import escape
 
 from aiogram import Bot
 
-from bot.services.notify import notify_admins
+from bot.services.notify import notify_platform
 
 logger = logging.getLogger(__name__)
 
@@ -140,4 +140,4 @@ async def check_ai_outage(bot: Bot, *, routers: dict | None = None,
         message = tracker.take_message(label)
         if message:
             logger.warning("Сторож ИИ (%s): %s", label, message.splitlines()[0])
-            await notify_admins(bot, message)
+            await notify_platform(bot, message)

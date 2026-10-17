@@ -27,6 +27,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import FSInputFile
 
+from bot.agency_config import cfg
 from bot.config import get_settings
 from bot.database import crud
 from bot.database.session import get_sessionmaker
@@ -144,7 +145,7 @@ class AutoReposter:
         text = "🤖 <b>Авто-импорт (на модерацию)</b>\n\n" + format_property_card(prop)
         kb = moderation_kb(prop.id)
         photos = prop.photo_list
-        for admin_id in self._settings.admin_ids:
+        for admin_id in cfg().admin_ids:
             try:
                 if photos and os.path.exists(photos[0]):
                     await self._bot.send_photo(admin_id, FSInputFile(photos[0]), caption=text, reply_markup=kb)

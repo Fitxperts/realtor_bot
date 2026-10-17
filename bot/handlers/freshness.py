@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
-from bot.config import get_settings
+from bot.agency_config import cfg
 from bot.database import crud
 from bot.database.models import Property, PropertyStatus
 from bot.services import publisher
@@ -21,7 +21,7 @@ router = Router(name="freshness")
 async def _allowed_property(callback: CallbackQuery, session: AsyncSession) -> Property | None:
     prop = await crud.get_property(session, callback.data.split(":", 2)[2])
     user_id = callback.from_user.id
-    if prop is None or not (prop.owner_telegram_id == user_id or get_settings().is_admin(user_id)):
+    if prop is None or not (prop.owner_telegram_id == user_id or cfg().is_admin(user_id)):
         return None
     return prop
 
@@ -52,6 +52,6 @@ async def closed(callback: CallbackQuery, session: AsyncSession, bot: Bot, lang:
     await publisher.mark_as_rented(bot, session, prop.id)
     await callback.answer(i18n.t("fresh_sold_done", lang), show_alert=True)
     await callback.message.edit_reply_markup(reply_markup=None)
-    if not get_settings().is_admin(callback.from_user.id):
+    if not cfg().is_admin(callback.from_user.id):
         await notify_admins(bot, f"⛔ Владелец отметил объект {escape(prop.id)} как сданный/проданный "
                                  "(проверка актуальности).")

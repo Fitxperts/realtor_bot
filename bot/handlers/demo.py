@@ -26,7 +26,7 @@ from aiogram.types import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
-from bot.config import get_settings
+from bot.agency_config import cfg
 from bot.database import crud
 from bot.database.models import Property, PropertyStatus, UserRole
 from bot.keyboards import common_kb
@@ -142,7 +142,7 @@ async def publish_visitor_listing(
     message: Message, session: AsyncSession, bot: Bot, lang: str, prop: Property, user: User
 ) -> None:
     """Объявление посетителя — сразу в демо-канал (без модерации) + показ админской карточки."""
-    channel = get_settings().channel_id
+    channel = cfg().channel_id
     link = None
     if channel:
         try:

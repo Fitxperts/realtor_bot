@@ -13,7 +13,7 @@ import os
 from aiogram import Bot
 from aiogram.types import BufferedInputFile, FSInputFile
 
-from bot.config import WATERMARK_TEXT
+from bot.agency_config import cfg
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +71,10 @@ async def watermark_photos(bot: Bot, sources: list[str]) -> list:
     При выключенном знаке или сбое — отдаём оригинал (file_id / FSInputFile).
     """
     result: list = []
+    watermark = cfg().watermark
     for src in sources:
         is_path = isinstance(src, str) and os.path.exists(src)
-        if not WATERMARK_TEXT:
+        if not watermark:
             result.append(FSInputFile(src) if is_path else src)
             continue
         try:
@@ -84,7 +85,7 @@ async def watermark_photos(bot: Bot, sources: list[str]) -> list:
                 buf = io.BytesIO()
                 await bot.download(src, destination=buf)
                 raw = buf.getvalue()
-            data = stamp(raw, WATERMARK_TEXT)
+            data = stamp(raw, watermark)
             result.append(BufferedInputFile(data, filename="photo.jpg"))
         except Exception:  # noqa: BLE001 - любой сбой → публикуем оригинал
             logger.debug("Водяной знак пропущен для %s (откат к оригиналу)", src)

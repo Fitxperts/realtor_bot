@@ -17,14 +17,8 @@ import json
 import logging
 import re
 
-from bot.config import (
-    AGENCY_CONTACTS,
-    AGENCY_NAME,
-    BOT_PUBLISH_URL,
-    CHANNEL_URL,
-    PREMIUM_EMOJI,
-    get_settings,
-)
+from bot.agency_config import cfg
+from bot.config import PREMIUM_EMOJI, get_settings
 from bot.services import offline_parser
 from bot.services.llm_providers import LLMRouter, build_chain
 
@@ -98,6 +92,7 @@ class AIService:
 
     def generate_description(self, property_data: dict) -> str:
         d = property_data
+        agency = cfg()
         em = self._emoji
         deal = d.get("deal_type") or d.get("type")
         kind = d.get("property_kind")
@@ -150,14 +145,16 @@ class AIService:
         # Номера показываем открыто (без спойлера) — сразу видны и кликабельны.
         contacts = "\n".join(
             f"☎️ {escape_md(phone)} \\| @{escape_md(username)}"
-            for phone, username in AGENCY_CONTACTS
+            for phone, username in agency.contacts
         )
         lines.append(contacts)
         lines.append("")
 
         lines.append("➖➖➖➖➖➖➖➖➖➖")
-        lines.append(f"📢 [«{escape_md(AGENCY_NAME)}» каналига обуна бўлинг]({CHANNEL_URL})")
-        lines.append(f"📥 [Ботда бепул эълон жойлаш]({BOT_PUBLISH_URL})")
+        if agency.channel_url:
+            lines.append(f"📢 [«{escape_md(agency.name)}» каналига обуна бўлинг]({agency.channel_url})")
+        if agency.publish_url:
+            lines.append(f"📥 [Ботда бепул эълон жойлаш]({agency.publish_url})")
         return "\n".join(lines)
 
     @staticmethod

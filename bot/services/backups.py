@@ -17,7 +17,7 @@ from aiogram import Bot
 from aiogram.types import FSInputFile
 
 from bot.config import get_settings
-from bot.services.notify import notify_admins
+from bot.services.notify import notify_platform
 
 logger = logging.getLogger(__name__)
 
@@ -67,13 +67,13 @@ async def ship_latest_backup(bot: Bot, *, directory: Path | None = None,
 
     status = backup_status(directory)
     if status["error"]:
-        await notify_admins(bot, f"⚠️ <b>Бэкап базы не удался</b>\n<code>{status['error'][:500]}</code>\n"
+        await notify_platform(bot, f"⚠️ <b>Бэкап базы не удался</b>\n<code>{status['error'][:500]}</code>\n"
                           "Логи: <code>docker compose logs backup</code>")
         return "error"
     latest: Path | None = status["latest"]
     if latest is None or status["age_hours"] > STALE_HOURS:
         age = "ни одного бэкапа" if latest is None else f"последний {status['age_hours']:.0f} ч назад"
-        await notify_admins(bot, f"⚠️ <b>Свежего бэкапа базы нет</b> ({age}). Проверь сервис backup: "
+        await notify_platform(bot, f"⚠️ <b>Свежего бэкапа базы нет</b> ({age}). Проверь сервис backup: "
                           "<code>docker compose logs backup</code>")
         return "stale"
 
@@ -82,7 +82,7 @@ async def ship_latest_backup(bot: Bot, *, directory: Path | None = None,
 
     size = latest.stat().st_size
     if size > TELEGRAM_LIMIT:
-        await notify_admins(bot, f"💾 Бэкап {latest.name} ({_mb(size)}) больше лимита Telegram — "
+        await notify_platform(bot, f"💾 Бэкап {latest.name} ({_mb(size)}) больше лимита Telegram — "
                           "лежит только на сервере. Нужно внешнее хранилище (S3/Backblaze).")
         result = "too_big"
     else:

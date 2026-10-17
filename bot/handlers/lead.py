@@ -28,6 +28,7 @@ from bot.database import crud
 from bot.database.models import ClientDealType, PropertyType
 from bot.handlers import demo
 from bot.services import analytics
+from bot.services.notify import notify_admins
 from bot.states.lead_states import LeadForm
 from bot.utils.formatters import format_property_brief, format_property_card
 from bot.utils.validators import is_valid_phone
@@ -70,7 +71,7 @@ async def begin_lead(
     # Клик по кнопке — сразу тёплый лид админам
     who = escape(actor.full_name or "")
     uname = f" (@{escape(actor.username)})" if actor.username else ""
-    await _notify_admins(bot, f"🎯 <b>Лид</b> по {escape(prop.id)}\n{who}{uname} нажал «Оставить заявку».")
+    await notify_admins(bot, f"🎯 <b>Лид</b> по {escape(prop.id)}\n{who}{uname} нажал «Оставить заявку».")
 
 
 @router.message(LeadForm.phone, F.contact)
@@ -110,7 +111,7 @@ async def _finish_lead(
             f"🎯 <b>Заявка по объекту</b>\nОбъект: {format_property_brief(prop)}\n"
             f"Клиент: {escape(client.id)} · {escape(client.name or '—')} · 📞 {escape(phone)}"
         )
-        await _notify_admins(bot, admin_text)
+        await notify_admins(bot, admin_text)
         await analytics.track("lead", telegram_id=message.from_user.id, property_id=prop.id)
 
     await message.answer(i18n.t("lead_thanks", lang), reply_markup=ReplyKeyboardRemove())
@@ -126,11 +127,3 @@ async def _finish_lead(
 @router.callback_query(LeadForm.phone)
 async def _noop(callback: CallbackQuery) -> None:
     await callback.answer()
-
-
-async def _notify_admins(bot: Bot, text: str) -> None:
-    for admin_id in get_settings().admin_ids:
-        try:
-            await bot.send_message(admin_id, text)
-        except Exception:  # noqa: BLE001
-            logger.debug("Не удалось уведомить админа %s", admin_id)

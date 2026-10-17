@@ -12,7 +12,7 @@ from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.config import get_settings
+from bot.agency_config import cfg
 from bot.database import crud
 from bot.database.models import Property, PropertyStatus, PropertyType
 from bot.services import analytics
@@ -151,7 +151,7 @@ async def publish_property(bot: Bot, session: AsyncSession, property_id: str) ->
     text = get_ai_service().generate_description(_prop_to_dict(prop))
     kb = await _lead_kb(bot, prop.id)
     media = await watermark_photos(bot, prop.photo_list)
-    post_id = await _send_post(bot, get_settings().channel_id, text, media, reply_markup=kb)
+    post_id = await _send_post(bot, cfg().channel_id, text, media, reply_markup=kb)
 
     prop.channel_post_id = post_id
     prop.status = PropertyStatus.active
@@ -186,7 +186,7 @@ async def mark_as_rented(bot: Bot, session: AsyncSession, property_id: str) -> P
         base = get_ai_service().generate_description(_prop_to_dict(prop))
         text = f"⛔ *{label}*\n\n" + base
         await _edit_post(
-            bot, get_settings().channel_id, prop.channel_post_id, text,
+            bot, cfg().channel_id, prop.channel_post_id, text,
             is_caption=_caption_post(prop.photo_list, base),
         )
 
@@ -204,7 +204,7 @@ async def archive_stale(bot: Bot, session: AsyncSession, property_id: str) -> Pr
     if prop.channel_post_id:
         base = get_ai_service().generate_description(_prop_to_dict(prop))
         await _edit_post(
-            bot, get_settings().channel_id, prop.channel_post_id, "🗄 *Эълон долзарб эмас*\n\n" + base,
+            bot, cfg().channel_id, prop.channel_post_id, "🗄 *Эълон долзарб эмас*\n\n" + base,
             is_caption=_caption_post(prop.photo_list, base),
         )
     await session.commit()
@@ -218,7 +218,7 @@ async def bump_property(bot: Bot, session: AsyncSession, property_id: str) -> Pr
     if prop is None:
         return None
 
-    channel_id = get_settings().channel_id
+    channel_id = cfg().channel_id
     text = get_ai_service().generate_description(_prop_to_dict(prop))
 
     # Помечаем старый пост как неактуальный (архив)
