@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
 from bot.agency_config import cfg
-from bot.config import BUMP_INTERVAL_DAYS
+from bot.config import BUMP_INTERVAL_DAYS, get_settings
 from bot.database import crud
 from bot.database.models import (
     ClientStatus,
@@ -62,6 +62,15 @@ class IsAdmin(BaseFilter):
     async def __call__(self, event: Message | CallbackQuery) -> bool:
         user = event.from_user
         return bool(user and cfg().is_admin(user.id))
+
+
+class IsPlatformAdmin(BaseFilter):
+    """Владелец платформы (ADMIN_TELEGRAM_ID в .env): бэкап ВСЕЙ базы, ИИ-провайдеры, проверки.
+    Админам агентств это недоступно — в бэкапе данные всех агентств."""
+
+    async def __call__(self, event: Message | CallbackQuery) -> bool:
+        user = event.from_user
+        return bool(user and get_settings().is_admin(user.id))
 
 
 router = Router(name="admin")
@@ -488,7 +497,7 @@ async def _notify_owner(bot: Bot, session: AsyncSession, prop: Property, msg_key
 # ---------------------------------------------------------------------------
 # Диагностика ИИ-провайдеров (чтобы снятие модели не стоило дней поиска)
 # ---------------------------------------------------------------------------
-@router.message(Command("ai_status"))
+@router.message(Command("ai_status"), IsPlatformAdmin())
 async def ai_status(message: Message) -> None:
     """Живой тест каждого провайдера цепочки: текст, Vision, голос."""
     await message.answer("🔎 Проверяю ИИ-провайдеров…")
@@ -517,7 +526,7 @@ async def ai_status(message: Message) -> None:
     await message.answer("\n".join(lines))
 
 
-@router.message(Command("ai_models"))
+@router.message(Command("ai_models"), IsPlatformAdmin())
 async def ai_models(message: Message, command: CommandObject) -> None:
     """Список реально доступных моделей провайдера — не угадываем имена."""
     name = (command.args or "").strip().lower()
@@ -537,7 +546,7 @@ async def ai_models(message: Message, command: CommandObject) -> None:
 # ---------------------------------------------------------------------------
 # Бэкапы базы
 # ---------------------------------------------------------------------------
-@router.message(Command("backup"))
+@router.message(Command("backup"), IsPlatformAdmin())
 async def backup_now(message: Message, bot: Bot) -> None:
     """Свежий бэкап базы — файлом в этот чат (проверка, что бэкапы живы)."""
     result = await backups.ship_latest_backup(bot, chat_id=message.chat.id, force=True)
@@ -556,7 +565,7 @@ async def backup_now(message: Message, bot: Bot) -> None:
 _eval_running: set[int] = set()
 
 
-@router.message(Command("ai_eval"))
+@router.message(Command("ai_eval"), IsPlatformAdmin())
 async def ai_eval(message: Message, command: CommandObject, bot: Bot) -> None:
     """Прогнать контрольные объявления через ИИ и показать точность по полям."""
     from bot.evals import run as evals

@@ -1,25 +1,31 @@
-"""Точка входа РиелторБота: инициализация бота, диспетчера и запуск polling."""
+"""Точка входа РиелторБота: диспетчер, боты всех агентств, webhook или polling.
+
+Один процесс обслуживает основной бот (агентство №1, BOT_TOKEN, путь /webhook) и
+ботов подключённых агентств (путь /webhook/a<id>, свой секрет у каждого).
+"""
 from __future__ import annotations
 
 import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramNetworkError
+from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import BotCommand, BotCommandScopeChat, ErrorEvent
 
-from bot.agency_config import cfg
+from bot import bots
+from bot.agency_config import cfg, load_agencies
+from bot.bots import AgencyMiddleware
 from bot.config import get_settings
 from bot.handlers import register_routers
 from bot.logging_setup import init_sentry, setup_logging
 from bot.middlewares.db import DbSessionMiddleware
 from bot.middlewares.i18n import LanguageMiddleware
 from bot.middlewares.throttling import ThrottlingMiddleware
-from bot.net_session import RobustSession
 from bot.services.scheduler import setup_scheduler
+from bot.tenancy import DEFAULT_AGENCY_ID, current_agency_id
+from bot.web.agency_webhook import AgencyRequestHandler, agency_path
 from bot.web.landing import register_landing
 
 _COMMANDS = [
@@ -28,8 +34,8 @@ _COMMANDS = [
     BotCommand(command="cancel", description="Отменить действие"),
     BotCommand(command="help", description="Помощь"),
 ]
-# Админам в меню дополнительно служебные команды (видят только они)
-_ADMIN_COMMANDS = _COMMANDS + [
+# Владельцу платформы в меню — служебные команды (агентствам они недоступны)
+_PLATFORM_COMMANDS = _COMMANDS + [
     BotCommand(command="ai_status", description="Проверка ИИ-провайдеров"),
     BotCommand(command="ai_models", description="Модели провайдера: /ai_models groq"),
     BotCommand(command="backup", description="Свежий бэкап базы файлом"),
@@ -40,13 +46,29 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-async def _set_commands(bot: Bot, settings) -> None:
+async def _set_commands(bot: Bot, agency_id: int = DEFAULT_AGENCY_ID) -> None:
     await bot.set_my_commands(_COMMANDS)
-    for admin_id in cfg().admin_ids:  # админы агентства этого бота
+    platform = set(get_settings().admin_ids)
+    for admin_id in cfg(agency_id).admin_ids:  # служебное меню — только владельцу платформы
+        if admin_id not in platform:
+            continue
         try:
-            await bot.set_my_commands(_ADMIN_COMMANDS, scope=BotCommandScopeChat(chat_id=admin_id))
+            await bot.set_my_commands(_PLATFORM_COMMANDS, scope=BotCommandScopeChat(chat_id=admin_id))
         except Exception as exc:  # noqa: BLE001 - админ ещё не писал боту
             logger.warning("Меню админа %s не установлено: %s", admin_id, exc)
+
+
+async def _load_platform() -> None:
+    """Агентства и их боты из БД. Сбой (БД ещё не готова) — работаем с основным ботом."""
+    from bot.database.session import get_sessionmaker
+
+    try:
+        async with get_sessionmaker()() as session:
+            await load_agencies(session)
+            loaded = await bots.load_agency_bots(session)
+        logger.info("Боты агентств: %s", loaded or "только основной")
+    except Exception:  # noqa: BLE001
+        logger.exception("Не удалось загрузить агентства — работает только основной бот")
 
 
 _background: set[asyncio.Task] = set()
@@ -72,7 +94,8 @@ def _register_error_handler(dp: Dispatcher, bot: Bot, settings) -> None:
             logger.warning("Сетевой сбой Telegram (временный): %s", event.exception)
             return True
         logger.exception("Необработанная ошибка в хендлере", exc_info=event.exception)
-        text = f"⚠️ Ошибка бота: {type(event.exception).__name__}: {event.exception}"[:1000]
+        text = (f"⚠️ Ошибка бота (агентство {current_agency_id()}): "
+                f"{type(event.exception).__name__}: {event.exception}")[:1000]
         for admin_id in settings.admin_ids:
             try:
                 await bot.send_message(admin_id, text)
@@ -85,14 +108,13 @@ def _build(settings) -> tuple[Bot, Dispatcher, RedisStorage]:
     """Общая сборка бота, диспетчера и middleware (для polling и webhook)."""
     # Устойчивая к «плавающей» сети сессия: только IPv4 (обход мёртвого IPv6
     # до api.telegram.org) + короткие таймауты + автоповтор отправки.
-    bot = Bot(
-        token=settings.bot_token,
-        session=RobustSession(),
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-    )
-    storage = RedisStorage.from_url(settings.redis_url)
+    bot = bots.make_bot(settings.bot_token)
+    bots.register_bot(DEFAULT_AGENCY_ID, bot, settings.webhook_secret or None)
+    # bot_id в ключе состояния: человек в ботах двух агентств — две независимые анкеты
+    storage = RedisStorage.from_url(settings.redis_url, key_builder=DefaultKeyBuilder(with_bot_id=True))
     dp = Dispatcher(storage=storage)
 
+    dp.update.outer_middleware(AgencyMiddleware())  # агентство — по боту, до любых запросов к БД
     dp.update.middleware(DbSessionMiddleware())
     dp.message.middleware(LanguageMiddleware())
     dp.callback_query.middleware(LanguageMiddleware())
@@ -106,19 +128,24 @@ def _build(settings) -> tuple[Bot, Dispatcher, RedisStorage]:
 
 async def _run_polling(settings) -> None:
     bot, dp, storage = _build(settings)
+    await _load_platform()
     scheduler = setup_scheduler(bot)
     scheduler.start()
-    logger.info("РиелторБот запущен (polling)")
+    all_bots = bots.agency_bots()
+    logger.info("РиелторБот запущен (polling, ботов: %d)", len(all_bots))
     try:
-        await bot.delete_webhook(drop_pending_updates=True)
-        await _set_commands(bot, settings)
+        for agency_id, agency_bot in all_bots.items():
+            await agency_bot.delete_webhook(drop_pending_updates=True)
+            await _set_commands(agency_bot, agency_id)
         _start_demo(bot, settings)
-        # polling_timeout поменьше → быстрее восстановление после сетевого блипа
-        await dp.start_polling(bot, polling_timeout=20)
+        # polling_timeout поменьше → быстрее восстановление после сетевого блипа.
+        # Новые агентства в режиме polling подхватываются после перезапуска.
+        await dp.start_polling(*all_bots.values(), polling_timeout=20)
     finally:
         scheduler.shutdown(wait=False)
         await storage.close()
-        await bot.session.close()
+        for agency_bot in all_bots.values():
+            await agency_bot.session.close()
         logger.info("РиелторБот остановлен")
 
 
@@ -134,53 +161,71 @@ def _run_webhook(settings) -> None:
     bot, dp, storage = _build(settings)
     scheduler = setup_scheduler(bot)
     webhook_url = settings.webhook_url.rstrip("/") + settings.webhook_path
-    secret = settings.webhook_secret or None
 
-    async def _set_webhook(drop: bool) -> None:
-        await bot.set_webhook(
-            webhook_url, secret_token=secret,
+    def url_for(agency_id: int) -> str:
+        return settings.webhook_url.rstrip("/") + agency_path(settings.webhook_path, agency_id)
+
+    async def _set_webhook(agency_id: int, agency_bot: Bot, drop: bool) -> None:
+        secret = settings.webhook_secret or None if agency_id == DEFAULT_AGENCY_ID else bots.secret_for(agency_id)
+        await agency_bot.set_webhook(
+            url_for(agency_id), secret_token=secret,
             drop_pending_updates=drop, allowed_updates=dp.resolve_used_update_types(),
         )
 
+    async def _install(agency_id: int, agency_bot: Bot) -> None:
+        """Вебхук + меню бота агентства (при старте и при подключении нового агентства)."""
+        await _set_webhook(agency_id, agency_bot, drop=True)
+        await _set_commands(agency_bot, agency_id)
+        logger.info("Бот агентства %s подключён: %s", agency_id, url_for(agency_id))
+
     async def _webhook_watchdog() -> None:
-        """Каждые 30 мин проверяем вебхук и восстанавливаем, если слетел.
+        """Каждые 30 мин проверяем вебхуки ВСЕХ ботов и восстанавливаем слетевшие.
 
         Страхует от «тихой смерти»: если set_webhook когда-то не прошёл (NPM/серт
         были недоступны) — вебхук восстановится сам, без ручного вмешательства.
         """
         while True:
             await asyncio.sleep(1800)
-            try:
-                info = await bot.get_webhook_info()
-                if (info.url or "") != webhook_url:
-                    logger.warning("Webhook слетел (url=%r) — переустанавливаю", info.url)
-                    await _set_webhook(drop=False)
-                    logger.info("Webhook восстановлен watchdog'ом")
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Watchdog webhook: %s", exc)
+            for agency_id, agency_bot in bots.agency_bots().items():
+                try:
+                    info = await agency_bot.get_webhook_info()
+                    if (info.url or "") != url_for(agency_id):
+                        logger.warning("Webhook агентства %s слетел (url=%r) — переустанавливаю",
+                                       agency_id, info.url)
+                        await _set_webhook(agency_id, agency_bot, drop=False)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("Watchdog webhook (агентство %s): %s", agency_id, exc)
 
     async def on_startup(bot: Bot) -> None:
+        await _load_platform()
+        bots.set_activation_hook(_install)
         scheduler.start()
         _start_demo(bot, settings)
         # set_webhook нефатален, НО с автоповтором: прокси/сертификат (NPM) при
         # старте могут быть ещё не готовы — раньше это приводило к «тихому»
         # зависанию без вебхука. Теперь ретраим с нарастающей паузой + watchdog.
+        pending = bots.agency_bots()
         for attempt in range(1, 8):
-            try:
-                await _set_webhook(drop=True)
-                await _set_commands(bot, settings)
-                logger.info("РиелторБот запущен (webhook: %s)", webhook_url)
+            for agency_id, agency_bot in list(pending.items()):
+                try:
+                    await _install(agency_id, agency_bot)
+                    pending.pop(agency_id)
+                except Exception as exc:  # noqa: BLE001
+                    logger.error("set_webhook (агентство %s): попытка %d/7 не удалась (%s)",
+                                 agency_id, attempt, exc)
+            if not pending:
+                logger.info("РиелторБот запущен (webhook: %s, ботов: %d)", webhook_url,
+                            len(bots.agency_bots()))
                 break
-            except Exception as exc:  # noqa: BLE001
-                logger.error("set_webhook: попытка %d/7 не удалась (%s), повтор через %dс",
-                             attempt, exc, min(60, 10 * attempt))
-                await asyncio.sleep(min(60, 10 * attempt))
+            await asyncio.sleep(min(60, 10 * attempt))
         else:
-            logger.error("Webhook не установлен после 7 попыток — watchdog продолжит попытки. "
-                         "Проверьте домен/NPM/сертификат.")
-        asyncio.create_task(_webhook_watchdog())
+            logger.error("Webhook не установлен после 7 попыток (агентства %s) — watchdog продолжит "
+                         "попытки. Проверьте домен/NPM/сертификат.", list(pending))
+        task = asyncio.create_task(_webhook_watchdog())
+        _background.add(task)
 
     async def on_shutdown(bot: Bot) -> None:
+        bots.set_activation_hook(None)
         scheduler.shutdown(wait=False)
         await storage.close()
         await bot.session.close()
@@ -209,6 +254,19 @@ def _run_webhook(settings) -> None:
             status["webhook_ok"] = False
             status["telegram_error"] = type(exc).__name__
             code = 503
+        broken = []
+        for agency_id, agency_bot in bots.agency_bots().items():
+            if agency_id == DEFAULT_AGENCY_ID:
+                continue
+            try:
+                if ((await agency_bot.get_webhook_info()).url or "") != url_for(agency_id):
+                    broken.append(agency_id)
+            except Exception:  # noqa: BLE001
+                broken.append(agency_id)
+        status["agencies"] = len(bots.agency_bots())
+        if broken:
+            status["agencies_webhook_broken"] = broken
+            code = 503
         try:
             async with get_sessionmaker()() as s:
                 await s.execute(text("SELECT 1"))
@@ -221,9 +279,10 @@ def _run_webhook(settings) -> None:
     app = web.Application()
     app.router.add_get("/health", health)
     register_landing(app)  # https://<домен>/ — страница продукта для агентств
-    SimpleRequestHandler(dispatcher=dp, bot=bot, secret_token=secret).register(
+    SimpleRequestHandler(dispatcher=dp, bot=bot, secret_token=settings.webhook_secret or None).register(
         app, path=settings.webhook_path
     )
+    AgencyRequestHandler(dispatcher=dp).register_routes(app, settings.webhook_path)  # /webhook/a<id>
     setup_application(app, dp, bot=bot)
     web.run_app(app, host="0.0.0.0", port=settings.webhook_port)
 

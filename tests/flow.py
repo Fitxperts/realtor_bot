@@ -95,44 +95,73 @@ class Harness:
         from bot.services.llm_providers import LLMRouter
         monkeypatch.setattr(get_ai_service(), "router", LLMRouter([]))
 
+        from bot import agency_config, bots
+        from bot.bots import AgencyMiddleware
         from bot.handlers import register_routers
         from bot.middlewares.db import DbSessionMiddleware
         from bot.middlewares.i18n import LanguageMiddleware
 
+        saved_configs = dict(agency_config._registry)
         api = FakeSession()
         bot = Bot("42:TEST", session=api, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+        bots.clear()
+        bots.register_bot(1, bot)                       # основной бот = агентство №1, как в проде
         dp = Dispatcher(storage=MemoryStorage())
+        dp.update.outer_middleware(AgencyMiddleware())
         dp.update.middleware(DbSessionMiddleware())
         dp.message.middleware(LanguageMiddleware())
         dp.callback_query.middleware(LanguageMiddleware())
         register_routers(dp)
-        return cls(bot, dp, api, maker)
+        harness = cls(bot, dp, api, maker)
+        harness._saved_configs = saved_configs
+        return harness
+
+    def add_agency_bot(self, agency_id: int, token: str, **agency_fields) -> tuple[Bot, FakeSession]:
+        """Ещё одно агентство со своим ботом и своим «Telegram» (для тестов white-label)."""
+        from bot import bots
+        from bot.agency_config import from_row, register
+        from bot.database.models import Agency
+
+        api = FakeSession()
+        bot = Bot(token, session=api, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+        bots.register_bot(agency_id, bot, agency_fields.pop("webhook_secret", None))
+        agency_fields.setdefault("name", f"Агентство {agency_id}")
+        agency_fields.setdefault("status", "active")
+        register(from_row(Agency(id=agency_id, **agency_fields)))
+        return bot, api
 
     def detach(self) -> None:
-        """Роутеры aiogram цепляются к одному диспетчеру — отцепляем для следующего теста."""
+        """Роутеры aiogram цепляются к одному диспетчеру — отцепляем для следующего теста.
+        Заодно чистим реестры ботов и агентств."""
+        from bot import agency_config, bots
+
         for router in self.dp.sub_routers:
             router._parent_router = None
         self.dp.sub_routers.clear()
+        bots.clear()
+        agency_config._registry.clear()
+        agency_config._registry.update(getattr(self, "_saved_configs", {}))
 
     @staticmethod
     def user(uid: int) -> User:
         return User(id=uid, is_bot=False, first_name=f"User{uid}", username=f"user{uid}")
 
-    async def _feed(self, **kwargs) -> None:
-        await self.dp.feed_update(self.bot, Update(update_id=next(self._update_ids), **kwargs))
+    async def _feed(self, bot: Bot | None = None, **kwargs) -> None:
+        await self.dp.feed_update(bot or self.bot, Update(update_id=next(self._update_ids), **kwargs))
 
-    async def message(self, uid: int, text: str | None = None, *, contact: str | None = None) -> None:
+    async def message(self, uid: int, text: str | None = None, *, contact: str | None = None,
+                      bot: Bot | None = None) -> None:
         msg = Message(
             message_id=next(self._msg_ids), date=dt.datetime.now(), chat=Chat(id=uid, type="private"),
             from_user=self.user(uid), text=text,
             contact=Contact(phone_number=contact, first_name="U", user_id=uid) if contact else None,
         )
-        await self._feed(message=msg)
+        await self._feed(bot, message=msg)
 
-    async def callback(self, uid: int, data: str) -> None:
+    async def callback(self, uid: int, data: str, *, bot: Bot | None = None) -> None:
         origin = Message(message_id=next(self._msg_ids), date=dt.datetime.now(),
                          chat=Chat(id=uid, type="private"), from_user=BOT_USER, text="…")
-        await self._feed(callback_query=CallbackQuery(
+        await self._feed(bot, callback_query=CallbackQuery(
             id=str(next(self._update_ids)), from_user=self.user(uid), chat_instance="ci", data=data,
             message=origin,
         ))

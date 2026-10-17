@@ -19,6 +19,7 @@ import logging
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from bot.bots import for_each_agency
 from bot.config import BUMP_INTERVAL_DAYS, TIMEZONE, get_settings
 from bot.database import crud
 from bot.database.models import Client
@@ -98,42 +99,51 @@ async def remind(
 # Настройка
 # ---------------------------------------------------------------------------
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
+    """Задачи агентств идут для КАЖДОГО агентства с его ботом (for_each_agency);
+    задачи платформы (бэкап, сторож ИИ) — один раз, через основной бот."""
     scheduler = AsyncIOScheduler(timezone=TIMEZONE)
+
+    def per_agency(job, *args) -> list:
+        return [job, *args]
 
     if get_settings().demo_mode:
         from bot.services.demo import reset_demo
 
         # примеры не поднимаем (канал демо не засоряется), а каждую ночь всё чистим
         scheduler.add_job(
-            reset_demo, trigger="cron", hour=5, minute=0, args=[bot],
+            for_each_agency, trigger="cron", hour=5, minute=0, args=per_agency(reset_demo),
             id="demo_reset", replace_existing=True,
         )
     else:
         scheduler.add_job(
-            auto_bump, trigger="cron", hour=10, minute=0, args=[bot],
+            for_each_agency, trigger="cron", hour=10, minute=0, args=per_agency(auto_bump),
             id="auto_bump", replace_existing=True,
         )
         scheduler.add_job(
-            run_freshness, trigger="cron", hour=11, minute=0, args=[bot],
+            for_each_agency, trigger="cron", hour=11, minute=0, args=per_agency(run_freshness),
             id="freshness", replace_existing=True,
         )
     # Непересекающиеся окна: за день (2ч..24ч), за 2 часа (30м..2ч), за 30 минут (0..30м)
     scheduler.add_job(
-        remind, trigger="interval", hours=1,
-        args=[bot, dt.timedelta(hours=2), dt.timedelta(days=1), "reminded_1d", "завтра"],
+        for_each_agency, trigger="interval", hours=1,
+        args=per_agency(remind, dt.timedelta(hours=2), dt.timedelta(days=1), "reminded_1d", "завтра"),
         id="remind_1d", replace_existing=True,
     )
     scheduler.add_job(
-        remind, trigger="interval", minutes=15,
-        args=[bot, dt.timedelta(minutes=30), dt.timedelta(hours=2), "reminded_2h", "через ~2 часа"],
+        for_each_agency, trigger="interval", minutes=15,
+        args=per_agency(remind, dt.timedelta(minutes=30), dt.timedelta(hours=2), "reminded_2h", "через ~2 часа"),
         id="remind_2h", replace_existing=True,
     )
     scheduler.add_job(
-        remind, trigger="interval", minutes=5,
-        args=[bot, dt.timedelta(0), dt.timedelta(minutes=30), "reminded_30m", "через 30 минут"],
+        for_each_agency, trigger="interval", minutes=5,
+        args=per_agency(remind, dt.timedelta(0), dt.timedelta(minutes=30), "reminded_30m", "через 30 минут"),
         id="remind_30m", replace_existing=True,
     )
-    # Сервис backup делает дамп после 03:00 — к 04:10 он точно готов
+    scheduler.add_job(
+        for_each_agency, trigger="cron", day_of_week="mon", hour=9, minute=0, args=per_agency(weekly_report),
+        id="weekly_report", replace_existing=True,
+    )
+    # Платформа: сервис backup делает дамп после 03:00 — к 04:10 он точно готов
     scheduler.add_job(
         ship_latest_backup, trigger="cron", hour=4, minute=10, args=[bot],
         id="ship_backup", replace_existing=True,
@@ -141,10 +151,6 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler.add_job(
         check_ai_outage, trigger="interval", minutes=5, args=[bot],
         id="ai_watchdog", replace_existing=True,
-    )
-    scheduler.add_job(
-        weekly_report, trigger="cron", day_of_week="mon", hour=9, minute=0, args=[bot],
-        id="weekly_report", replace_existing=True,
     )
 
     logger.info("Планировщик настроен: %d задач (TZ=%s)", len(scheduler.get_jobs()), TIMEZONE)
