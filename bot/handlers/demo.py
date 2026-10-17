@@ -27,7 +27,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
 from bot.config import get_settings
-from bot.database.models import BotUser, Property, PropertyStatus, UserRole
+from bot.database import crud
+from bot.database.models import Property, PropertyStatus, UserRole
 from bot.keyboards import common_kb
 from bot.services import publisher
 from bot.services.notify import notify_admins
@@ -120,7 +121,7 @@ async def _finish_want(
 ) -> None:
     await state.clear()
     await notify_admins(bot, f"💼 <b>Демо-лид на бота</b>\n{_who(message.from_user)}\n📞 {escape(phone)}")
-    user = await session.get(BotUser, message.from_user.id)
+    user = await crud.get_user(session, message.from_user.id)
     menu = common_kb.owner_menu(lang) if user and user.role == UserRole.owner else common_kb.client_menu(lang)
     await message.answer(i18n.t("demo_want_thanks", lang), reply_markup=menu)
 

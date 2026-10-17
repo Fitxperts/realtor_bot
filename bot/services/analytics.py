@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
 from bot.config import get_settings
+from bot.database import crud
 from bot.database.models import BotUser, Event
 from bot.database.session import get_sessionmaker
 from bot.utils import timeutils
@@ -127,7 +128,7 @@ async def weekly_report(bot: Bot) -> None:
     """Задача планировщика (понедельник утром): отчёт за неделю каждому админу на его языке."""
     async with get_sessionmaker()() as session:
         for admin_id in get_settings().admin_ids:
-            user = await session.get(BotUser, admin_id)
+            user = await crud.get_user(session, admin_id)
             lang = i18n.normalize(user.language if user else None)
             text = await activity_report(session, lang, title_key="an_title_week")
             try:

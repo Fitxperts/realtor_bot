@@ -22,7 +22,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
 from bot.config import get_settings
-from bot.database.models import BotUser, Property, PropertyStatus
+from bot.database import crud
+from bot.database.models import Property, PropertyStatus
 from bot.database.session import get_sessionmaker
 from bot.services import publisher
 from bot.services.notify import notify_admins
@@ -44,7 +45,7 @@ def freshness_kb(property_id: str, lang: str, *, only_yes: bool = False) -> Inli
 
 
 async def _lang(session: AsyncSession, telegram_id: int) -> str:
-    user = await session.get(BotUser, telegram_id)
+    user = await crud.get_user(session, telegram_id)
     return i18n.normalize(user.language if user else None)
 
 

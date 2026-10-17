@@ -13,7 +13,7 @@ from typing import Any
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 
-from bot.database.models import BotUser
+from bot.database import crud
 from bot.i18n import DEFAULT_LANG, normalize
 
 
@@ -28,7 +28,7 @@ class LanguageMiddleware(BaseMiddleware):
         user = getattr(event, "from_user", None)
         session = data.get("session")
         if user is not None and session is not None:
-            row = await session.get(BotUser, user.id)
+            row = await crud.get_user(session, user.id)
             if row is not None and row.language:
                 lang = normalize(row.language)
         data["lang"] = lang

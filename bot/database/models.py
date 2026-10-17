@@ -7,6 +7,8 @@
 - bot_users     — пользователи бота
 - search_alerts — какие объекты уже присланы по подпискам (без повторов, лимит в день)
 - events        — события для аналитики (просмотры, клики «заявка», заявки, публикации)
+- agencies      — агентства (white-label): у всех таблиц выше есть agency_id,
+                  фильтр по текущему агентству ставится автоматически (bot/tenancy.py)
 """
 from __future__ import annotations
 
@@ -29,11 +31,35 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from bot.tenancy import AgencyScoped, current_agency_id
 from bot.utils import timeutils
 
 
 class Base(DeclarativeBase):
     pass
+
+
+class Agency(Base):
+    """Агентство-клиент платформы: свой бот, канал и бренд."""
+
+    __tablename__ = "agencies"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128))
+    city: Mapped[str | None] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), default="active")   # active | disabled
+    bot_token_enc: Mapped[str | None] = mapped_column(Text)             # токен бота, зашифрован
+    bot_id: Mapped[int | None] = mapped_column(BigInteger, unique=True)
+    bot_username: Mapped[str | None] = mapped_column(String(64))
+    webhook_secret: Mapped[str | None] = mapped_column(String(64))
+    channel_id: Mapped[str | None] = mapped_column(String(64))
+    channel_url: Mapped[str | None] = mapped_column(String(255))
+    contacts: Mapped[str | None] = mapped_column(String(255))           # «+998…:user,+998…:user2»
+    watermark: Mapped[str | None] = mapped_column(String(64))
+    admin_ids: Mapped[str | None] = mapped_column(String(255))          # «123,456»
+    owner_telegram_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    language: Mapped[str] = mapped_column(String(2), default="uz")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(), default=timeutils.now)
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +114,7 @@ class UserRole(str, enum.Enum):
 # ---------------------------------------------------------------------------
 # Таблицы
 # ---------------------------------------------------------------------------
-class Property(Base):
+class Property(AgencyScoped, Base):
     """Объект недвижимости."""
 
     __tablename__ = "properties"
@@ -149,7 +175,7 @@ class Property(Base):
         return [p for p in (self.photos or "").split(",") if p]
 
 
-class Client(Base):
+class Client(AgencyScoped, Base):
     """Заявка клиента на подбор недвижимости."""
 
     __tablename__ = "clients"
@@ -182,7 +208,7 @@ class Client(Base):
     )
 
 
-class Meeting(Base):
+class Meeting(AgencyScoped, Base):
     """Встреча / просмотр объекта клиентом."""
 
     __tablename__ = "meetings"
@@ -208,11 +234,15 @@ class Meeting(Base):
     property: Mapped[Property] = relationship(back_populates="meetings")
 
 
-class BotUser(Base):
+class BotUser(AgencyScoped, Base):
     """Пользователь Telegram-бота."""
 
     __tablename__ = "bot_users"
 
+    # В каждом агентстве свой профиль (язык, роль): ключ — агентство + Telegram ID
+    agency_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("agencies.id"), primary_key=True, default=current_agency_id
+    )
     telegram_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.client)
     role_chosen: Mapped[bool] = mapped_column(Boolean, default=False)  # выбрал ли роль явно
@@ -224,7 +254,7 @@ class BotUser(Base):
     )
 
 
-class SearchAlert(Base):
+class SearchAlert(AgencyScoped, Base):
     """Объект, присланный пользователю по подписке: без повторов и с лимитом в сутки."""
 
     __tablename__ = "search_alerts"
@@ -237,7 +267,7 @@ class SearchAlert(Base):
     sent_at: Mapped[dt.datetime] = mapped_column(DateTime(), default=timeutils.now, index=True)
 
 
-class Event(Base):
+class Event(AgencyScoped, Base):
     """Событие для аналитики агентства. Без внешних ключей: статистика переживает удаление объекта."""
 
     __tablename__ = "events"

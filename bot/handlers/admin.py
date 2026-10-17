@@ -22,7 +22,6 @@ from bot import i18n
 from bot.config import BUMP_INTERVAL_DAYS, get_settings
 from bot.database import crud
 from bot.database.models import (
-    BotUser,
     ClientStatus,
     MeetingStatus,
     Property,
@@ -477,7 +476,7 @@ async def _clear_markup(callback: CallbackQuery) -> None:
 async def _notify_owner(bot: Bot, session: AsyncSession, prop: Property, msg_key: str, **kwargs) -> None:
     if not prop.owner_telegram_id:
         return
-    owner = await session.get(BotUser, prop.owner_telegram_id)
+    owner = await crud.get_user(session, prop.owner_telegram_id)
     owner_lang = owner.language if owner and owner.language else i18n.DEFAULT_LANG
     try:
         await bot.send_message(prop.owner_telegram_id, i18n.t(msg_key, owner_lang, **kwargs))

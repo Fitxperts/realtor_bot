@@ -91,7 +91,7 @@ async def choose_language(callback: CallbackQuery, state: FSMContext, session: A
     await callback.answer()
     await callback.message.answer(i18n.t("language_saved", code, name=i18n.LANGUAGES[code]))
 
-    user = await session.get(BotUser, callback.from_user.id)
+    user = await crud.get_user(session, callback.from_user.id)
     if get_settings().demo_mode:
         await _demo_welcome(callback.message, user, code)
     elif user and user.role_chosen:
@@ -206,7 +206,7 @@ async def cmd_reply(message: Message, session: AsyncSession, bot: Bot) -> None:
         await message.answer("Формат: /reply &lt;id&gt; текст")
         return
     target_id = int(parts[1])
-    target = await session.get(BotUser, target_id)
+    target = await crud.get_user(session, target_id)
     target_lang = target.language if target and target.language else i18n.DEFAULT_LANG
     try:
         await bot.send_message(target_id, i18n.t("support_reply_delivered", target_lang, text=escape(parts[2])))

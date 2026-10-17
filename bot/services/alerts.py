@@ -20,7 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import i18n
 from bot.config import get_settings
-from bot.database.models import BotUser, Client, Property, SearchAlert
+from bot.database import crud
+from bot.database.models import Client, Property, SearchAlert
 from bot.services import analytics, matcher
 from bot.utils import timeutils
 from bot.utils.formatters import format_property_card
@@ -37,7 +38,7 @@ def alert_kb(property_id: str, client_id: str, lang: str) -> InlineKeyboardMarku
 
 
 async def _language(session: AsyncSession, telegram_id: int) -> str:
-    user = await session.get(BotUser, telegram_id)
+    user = await crud.get_user(session, telegram_id)
     return i18n.normalize(user.language if user else None)
 
 

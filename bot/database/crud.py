@@ -19,6 +19,7 @@ from bot.database.models import (
     PropertyType,
     UserRole,
 )
+from bot.tenancy import ALL_AGENCIES, current_agency_id
 from bot.utils import timeutils
 
 # Префикс идентификатора объекта по типу недвижимости (APT_1001, HSE_1001, ...)
@@ -33,6 +34,11 @@ _KIND_PREFIX = {
 # ---------------------------------------------------------------------------
 # Пользователи бота
 # ---------------------------------------------------------------------------
+async def get_user(session: AsyncSession, telegram_id: int) -> BotUser | None:
+    """Профиль пользователя в ТЕКУЩЕМ агентстве (ключ — агентство + Telegram ID)."""
+    return await session.get(BotUser, (current_agency_id(), telegram_id))
+
+
 async def get_or_create_user(
     session: AsyncSession,
     telegram_id: int,
@@ -41,7 +47,7 @@ async def get_or_create_user(
     full_name: str | None = None,
     is_admin: bool = False,
 ) -> BotUser:
-    user = await session.get(BotUser, telegram_id)
+    user = await get_user(session, telegram_id)
     if user is None:
         user = BotUser(
             telegram_id=telegram_id,
@@ -68,7 +74,7 @@ async def get_or_create_user(
 
 async def choose_role(session: AsyncSession, telegram_id: int, role: UserRole) -> None:
     """Сохранить явно выбранную пользователем роль."""
-    user = await session.get(BotUser, telegram_id)
+    user = await get_user(session, telegram_id)
     if user:
         user.role = role
         user.role_chosen = True
@@ -76,7 +82,7 @@ async def choose_role(session: AsyncSession, telegram_id: int, role: UserRole) -
 
 
 async def set_user_role(session: AsyncSession, telegram_id: int, role: UserRole) -> None:
-    user = await session.get(BotUser, telegram_id)
+    user = await get_user(session, telegram_id)
     if user:
         user.role = role
         await session.commit()
@@ -84,7 +90,7 @@ async def set_user_role(session: AsyncSession, telegram_id: int, role: UserRole)
 
 async def set_language(session: AsyncSession, telegram_id: int, language: str) -> None:
     """Сохранить выбранный пользователем язык (uz|ru|en)."""
-    user = await session.get(BotUser, telegram_id)
+    user = await get_user(session, telegram_id)
     if user:
         user.language = language
         await session.commit()
@@ -94,7 +100,10 @@ async def set_language(session: AsyncSession, telegram_id: int, language: str) -
 # Генерация строковых идентификаторов (APT_1001, CLT_001, MTG_001)
 # ---------------------------------------------------------------------------
 async def _next_id(session: AsyncSession, model, prefix: str, *, start: int = 1, pad: int = 3) -> str:
-    ids = await session.scalars(select(model.id).where(model.id.like(f"{prefix}_%")))
+    # ID уникален на всю платформу (это первичный ключ) — ищем максимум по ВСЕМ агентствам
+    ids = await session.scalars(
+        select(model.id).where(model.id.like(f"{prefix}_%")).execution_options(**ALL_AGENCIES)
+    )
     max_n = start - 1
     for rid in ids:
         suffix = rid.rsplit("_", 1)[-1]
