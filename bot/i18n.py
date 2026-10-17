@@ -35,6 +35,13 @@ BUTTONS: dict[str, dict[str, str]] = {
     "lead_cta": {"uz": "✍️ Ariza qoldirish", "ru": "✍️ Оставить заявку", "en": "✍️ Leave a request"},
     "cat_more": {"uz": "⬇️ Yana koʻrsatish", "ru": "⬇️ Показать ещё", "en": "⬇️ Show more"},
     "deal_all": {"uz": "Hammasi", "ru": "Все", "en": "All"},
+    "cat_filter": {"uz": "🔎 Filtr", "ru": "🔎 Фильтр", "en": "🔎 Filter"},
+    "f_district": {"uz": "📍 Tuman", "ru": "📍 Район", "en": "📍 District"},
+    "f_rooms": {"uz": "🛏 Xonalar", "ru": "🛏 Комнаты", "en": "🛏 Rooms"},
+    "f_price": {"uz": "💰 Narx", "ru": "💰 Цена", "en": "💰 Price"},
+    "f_any": {"uz": "Istalgan", "ru": "Любой", "en": "Any"},
+    "f_reset": {"uz": "♻️ Tozalash", "ru": "♻️ Сбросить", "en": "♻️ Reset"},
+    "f_show": {"uz": "✅ Koʻrsatish ({n})", "ru": "✅ Показать ({n})", "en": "✅ Show ({n})"},
     "add_object": {"uz": "➕ E’lon joylash", "ru": "➕ Разместить объект", "en": "➕ Post a listing"},
     "my_objects": {"uz": "📋 Mening e’lonlarim", "ru": "📋 Мои объекты", "en": "📋 My listings"},
     "change_role": {"uz": "↩️ Rolni almashtirish", "ru": "↩️ Сменить роль", "en": "↩️ Change role"},
@@ -322,6 +329,32 @@ MESSAGES: dict[str, dict[str, str]] = {
         "uz": "🏠 Nimani koʻrsatay?",
         "ru": "🏠 Что показать?",
         "en": "🏠 What should I show?",
+    },
+    "f_panel": {
+        "uz": "🔎 <b>Filtr</b> · {deal}\n📍 Tuman: {district}\n🛏 Xonalar: {rooms}\n💰 Narx: {price}\n\nTopildi: <b>{count}</b>",
+        "ru": "🔎 <b>Фильтр</b> · {deal}\n📍 Район: {district}\n🛏 Комнаты: {rooms}\n💰 Цена: {price}\n\nНайдено: <b>{count}</b>",
+        "en": "🔎 <b>Filter</b> · {deal}\n📍 District: {district}\n🛏 Rooms: {rooms}\n💰 Price: {price}\n\nFound: <b>{count}</b>",
+    },
+    "f_any_district": {"uz": "istalgan", "ru": "любой", "en": "any"},
+    "f_any_rooms": {"uz": "istalgan", "ru": "любые", "en": "any"},
+    "f_any_price": {"uz": "istalgan", "ru": "любая", "en": "any"},
+    "f_price_upto": {"uz": "{amount} gacha", "ru": "до {amount}", "en": "up to {amount}"},
+    "f_price_need_deal": {
+        "uz": "Avval ijara yoki sotib olishni tanlang — narxlari har xil.",
+        "ru": "Сначала выберите аренду или покупку — цены у них разные.",
+        "en": "Choose rent or buy first — their prices differ.",
+    },
+    "f_no_districts": {
+        "uz": "Bu shartlar boʻyicha tumanlarda eʼlon yoʻq.",
+        "ru": "По этим условиям объявлений в районах нет.",
+        "en": "No listings in districts for these conditions.",
+    },
+    "catalog_empty_filter": {
+        "uz": "Bu filtr boʻyicha hozircha hech narsa yoʻq. Filtrni oʻzgartiring yoki ariza qoldiring — "
+              "paydo boʻlishi bilan yuboramiz 👇",
+        "ru": "По этому фильтру пока ничего нет. Измените фильтр или оставьте заявку — пришлём, "
+              "как появится 👇",
+        "en": "Nothing matches this filter yet. Change it or leave a request — we’ll send matches 👇",
     },
     "catalog_empty": {
         "uz": "Hozircha faol eʼlonlar yoʻq. Ariza qoldiring — rieltor siz uchun tanlab beradi 👇",

@@ -11,6 +11,7 @@ from bot.database import crud
 from bot.database.models import Client, Property, PropertyStatus
 from bot.handlers.demo import post_link
 from bot.services import demo
+from bot.services.catalog_filter import CatalogFilter, filtered
 from tests.flow import buttons
 
 ADMIN = 1          # ADMIN_TELEGRAM_ID из conftest
@@ -162,7 +163,7 @@ async def test_seed_is_idempotent_and_restores(make_harness):
         assert await demo.ensure_seed(session) == 0
         await session.refresh(prop)
         assert prop.status == PropertyStatus.active and prop.price == 68_000
-        assert await crud.count_active_properties(session) == 18
+        assert len(await filtered(session, CatalogFilter())) == 18
 
 
 async def test_reset_removes_visitor_data_keeps_seed(make_harness):
@@ -184,7 +185,7 @@ async def test_reset_removes_visitor_data_keeps_seed(make_harness):
     async with h.maker() as session:
         assert await session.get(Property, visitor_prop.id) is None
         assert await session.scalar(select(func.count()).select_from(Client)) == 0
-        assert await crud.count_active_properties(session) == 18
+        assert len(await filtered(session, CatalogFilter())) == 18
 
 
 async def test_publish_missing_posts_seed_once(make_harness):

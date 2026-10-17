@@ -138,11 +138,17 @@ def _price(low: str) -> tuple[float, str] | None:
     return best_cur or best_mult or best_plain
 
 
-def _district(text: str, low: str) -> str | None:
-    norm = _norm(low)
+def known_district(text: str | None) -> str | None:
+    """Известный массив в тексте (любое написание) → каноническое имя; иначе None."""
+    norm = _norm(text or "")
     hits = [(norm.find(alias), name) for name, aliases in DISTRICT_ALIASES for alias in aliases if alias in norm]
-    if hits:
-        return min(hits)[1]  # упомянутый первым
+    return min(hits)[1] if hits else None  # упомянутый первым
+
+
+def _district(text: str, low: str) -> str | None:
+    known = known_district(low)
+    if known:
+        return known
     # Неизвестное место (другой город): первое значимое слово — как писал автор
     for token in re.findall(r"[a-zа-яёўқғҳ][a-zа-яёўқғҳʻ’']{2,}", low):
         clean = token.strip("ʻ’'")
