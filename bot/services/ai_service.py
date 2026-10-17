@@ -369,6 +369,14 @@ class AIService:
                 numbers.append(int(digits))
         if numbers:
             result["price"] = float(max(numbers))
+        # Валюта: без этого «300$» уходило в канал как «300 сум»
+        if re.search(r"\$|usd|у\.\s?е|доллар|долл\b|dollar", low):
+            result["currency"] = "$"
+
+        # Этаж «3/5», «3/9 этаж», «4/5 qavat»: этаж/этажность
+        floor = re.search(r"(?<![\d/])(\d{1,2})\s*/\s*(\d{1,2})(?![\d/])(?!\s*(?:дол|ulush|qism))", low)
+        if floor and 0 < int(floor.group(1)) <= int(floor.group(2)) <= 40:
+            result["floor"], result["floors"] = int(floor.group(1)), int(floor.group(2))
 
         # Район: первое подходящее слово (кириллица ИЛИ узбекская латиница),
         # не начинающееся со стоп-слова.

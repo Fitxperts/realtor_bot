@@ -26,6 +26,7 @@ from bot import i18n
 from bot.config import get_settings
 from bot.database import crud
 from bot.database.models import BotUser, UserRole
+from bot.handlers import demo
 from bot.handlers.client import begin_client_form
 from bot.handlers.owner import begin_property_form
 from bot.keyboards import common_kb
@@ -70,6 +71,9 @@ async def cmd_start(
     if not user.language:
         await message.answer(_LANG_PROMPT, reply_markup=common_kb.language_kb())
         return
+    if get_settings().demo_mode:
+        await _demo_welcome(message, user, lang)
+        return
     if not user.role_chosen:
         await message.answer(i18n.t("choose_role", lang), reply_markup=common_kb.role_choice_kb(lang))
     else:
@@ -88,7 +92,9 @@ async def choose_language(callback: CallbackQuery, state: FSMContext, session: A
     await callback.message.answer(i18n.t("language_saved", code, name=i18n.LANGUAGES[code]))
 
     user = await session.get(BotUser, callback.from_user.id)
-    if user and user.role_chosen:
+    if get_settings().demo_mode:
+        await _demo_welcome(callback.message, user, code)
+    elif user and user.role_chosen:
         await _open_menu(callback.message, user.role, code)
     else:
         await callback.message.answer(i18n.t("choose_role", code), reply_markup=common_kb.role_choice_kb(code))
@@ -248,6 +254,13 @@ async def _open_scenario(
     else:
         await message.answer(i18n.t("client_mode", lang), reply_markup=common_kb.client_menu(lang))
         await begin_client_form(message, state, lang, full_name=full_name)
+
+
+async def _demo_welcome(message: Message, user: BotUser | None, lang: str) -> None:
+    """Демо: рассказать, что попробовать (кнопки ролей — в приветствии); меню — если роль уже есть."""
+    await demo.send_welcome(message, lang)
+    if user and user.role_chosen:
+        await _open_menu(message, user.role, lang)
 
 
 async def _open_menu(message: Message, role: UserRole, lang: str) -> None:

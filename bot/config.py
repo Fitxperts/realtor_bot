@@ -121,6 +121,13 @@ class Settings:
         self.backup_dir: str = os.getenv("BACKUP_DIR", "/app/backups").strip()
         self.backup_chat_id: int = int(os.getenv("BACKUP_CHAT_ID", "0") or 0)
 
+        # Демо-бот для продаж (отдельный токен и база, см. docker-compose.demo.yml):
+        # примеры объявлений, ежедневный сброс, объявления посетителей сразу в
+        # демо-канал, заявки и «Хочу такой бот» — тебе как лиды.
+        self.demo_mode: bool = os.getenv("DEMO_MODE", "").strip().lower() in ("1", "true", "yes")
+        self.demo_photos_dir: str = os.getenv("DEMO_PHOTOS_DIR", "/app/demo_photos").strip()
+        self.demo_daily_limit: int = int(os.getenv("DEMO_DAILY_LIMIT", "3") or 3)
+
         # Константы (дублируем на объекте настроек для удобного доступа)
         self.timezone: str = TIMEZONE
         self.bump_interval_days: int = BUMP_INTERVAL_DAYS

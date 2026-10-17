@@ -229,6 +229,13 @@ async def list_owner_properties(
     return list(await session.scalars(stmt))
 
 
+async def count_owner_properties_since(session: AsyncSession, telegram_id: int, since: dt.datetime) -> int:
+    stmt = select(func.count()).select_from(Property).where(
+        Property.owner_telegram_id == telegram_id, Property.created_at >= since
+    )
+    return int(await session.scalar(stmt) or 0)
+
+
 async def properties_due_for_bump(session: AsyncSession, older_than: dt.datetime) -> list[Property]:
     stmt = select(Property).where(
         Property.status == PropertyStatus.active,

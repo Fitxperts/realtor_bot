@@ -28,6 +28,7 @@ from bot.database.models import (
     PropertyType,
     UserRole,
 )
+from bot.handlers import demo
 from bot.keyboards import owner_kb
 from bot.keyboards.admin_kb import moderation_kb
 from bot.services import duplicate_checker
@@ -35,6 +36,7 @@ from bot.services.ai_service import get_ai_service
 from bot.services.transcribe import get_transcribe_service
 from bot.services.vision import get_vision_service
 from bot.states.owner_states import OwnerForm
+from bot.utils import timeutils
 from bot.utils.formatters import format_property_brief, format_property_card
 from bot.utils.media import photo_input
 from bot.utils.validators import is_valid_phone, parse_price
@@ -331,6 +333,9 @@ async def confirm_save(
     callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot, lang: str
 ) -> None:
     data = await state.get_data()
+    if get_settings().demo_mode and await _demo_limit_reached(session, callback.from_user.id):
+        await _demo_limit_reply(callback, state, lang)
+        return
 
     dups = await duplicate_checker.check_duplicates(session, data)
     if dups:
@@ -365,10 +370,16 @@ async def _save_property(
     callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot, lang: str
 ) -> None:
     data = await state.get_data()
+    settings = get_settings()
+    if settings.demo_mode and await _demo_limit_reached(session, callback.from_user.id):
+        await _demo_limit_reply(callback, state, lang)  # страховка для пути «всё равно добавить» (дубль)
+        return
 
     description = data.get("description") or await get_ai_service().generate_short_description(data)
 
     photos = data.get("photos", [])
+    if settings.demo_mode:
+        photos = photos[:1]  # одно фото = один пост: ночной сброс удалит его из канала целиком
     prop = await crud.create_property(
         session,
         property_kind=PropertyKind(data.get("property_kind", "apartment")),
@@ -393,10 +404,27 @@ async def _save_property(
     await state.clear()
 
     await callback.message.edit_reply_markup(reply_markup=None)
+    if settings.demo_mode:
+        await callback.answer()
+        await demo.publish_visitor_listing(callback.message, session, bot, lang, prop, callback.from_user)
+        return
     await callback.message.answer(i18n.t("sent_to_moderation", lang, id=prop.id))
     await callback.answer()
 
     await _notify_admins(bot, prop)
+
+
+async def _demo_limit_reply(callback: CallbackQuery, state: FSMContext, lang: str) -> None:
+    await state.clear()
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(i18n.t("demo_limit", lang, n=get_settings().demo_daily_limit))
+    await callback.answer()
+
+
+async def _demo_limit_reached(session: AsyncSession, telegram_id: int) -> bool:
+    today = timeutils.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    count = await crud.count_owner_properties_since(session, telegram_id, today)
+    return count >= get_settings().demo_daily_limit
 
 
 # ---------------------------------------------------------------------------

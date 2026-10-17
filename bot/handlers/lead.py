@@ -24,6 +24,7 @@ from bot import i18n
 from bot.config import get_settings
 from bot.database import crud
 from bot.database.models import ClientDealType, PropertyType
+from bot.handlers import demo
 from bot.states.lead_states import LeadForm
 from bot.utils.formatters import format_property_brief, format_property_card
 from bot.utils.validators import is_valid_phone
@@ -100,13 +101,15 @@ async def _finish_lead(
             currency="сум",
             residents=f"Заявка по объекту {prop.id}",
         )
-        await _notify_admins(
-            bot,
+        admin_text = (
             f"🎯 <b>Заявка по объекту</b>\nОбъект: {format_property_brief(prop)}\n"
-            f"Клиент: {escape(client.id)} · {escape(client.name or '—')} · 📞 {escape(phone)}",
+            f"Клиент: {escape(client.id)} · {escape(client.name or '—')} · 📞 {escape(phone)}"
         )
+        await _notify_admins(bot, admin_text)
 
     await message.answer(i18n.t("lead_thanks", lang), reply_markup=ReplyKeyboardRemove())
+    if prop is not None and get_settings().demo_mode:
+        await demo.show_lead_view(message, lang, admin_text)
 
 
 # Заглушка на случай, если объект уже удалён, а пользователь всё же в состоянии

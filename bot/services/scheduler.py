@@ -7,6 +7,7 @@
 - напоминание за 30 минут (каждые 5 минут);
 - копия ночного бэкапа базы в Telegram + тревога, если бэкапа нет (04:10);
 - сторож ИИ: тревога, если все ИИ-провайдеры лежат > 10 минут (каждые 5 минут).
+В демо-режиме вместо автоподнятия — ночной сброс демо-данных (05:00).
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ import logging
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from bot.config import BUMP_INTERVAL_DAYS, TIMEZONE
+from bot.config import BUMP_INTERVAL_DAYS, TIMEZONE, get_settings
 from bot.database import crud
 from bot.database.models import Client
 from bot.database.session import get_sessionmaker
@@ -95,10 +96,19 @@ async def remind(
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=TIMEZONE)
 
-    scheduler.add_job(
-        auto_bump, trigger="cron", hour=10, minute=0, args=[bot],
-        id="auto_bump", replace_existing=True,
-    )
+    if get_settings().demo_mode:
+        from bot.services.demo import reset_demo
+
+        # примеры не поднимаем (канал демо не засоряется), а каждую ночь всё чистим
+        scheduler.add_job(
+            reset_demo, trigger="cron", hour=5, minute=0, args=[bot],
+            id="demo_reset", replace_existing=True,
+        )
+    else:
+        scheduler.add_job(
+            auto_bump, trigger="cron", hour=10, minute=0, args=[bot],
+            id="auto_bump", replace_existing=True,
+        )
     # Непересекающиеся окна: за день (2ч..24ч), за 2 часа (30м..2ч), за 30 минут (0..30м)
     scheduler.add_job(
         remind, trigger="interval", hours=1,
@@ -125,5 +135,5 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         id="ai_watchdog", replace_existing=True,
     )
 
-    logger.info("Планировщик настроен: 6 задач (TZ=%s)", TIMEZONE)
+    logger.info("Планировщик настроен: %d задач (TZ=%s)", len(scheduler.get_jobs()), TIMEZONE)
     return scheduler

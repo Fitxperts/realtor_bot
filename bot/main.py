@@ -46,6 +46,20 @@ async def _set_commands(bot: Bot, settings) -> None:
             logger.warning("Меню админа %s не установлено: %s", admin_id, exc)
 
 
+_background: set[asyncio.Task] = set()
+
+
+def _start_demo(bot: Bot, settings) -> None:
+    """Демо-режим: примеры в базе и в канале — в фоне, чтобы не задерживать старт."""
+    if not settings.demo_mode:
+        return
+    from bot.services.demo import bootstrap
+
+    task = asyncio.create_task(bootstrap(bot))
+    _background.add(task)
+    task.add_done_callback(_background.discard)
+
+
 def _register_error_handler(dp: Dispatcher, bot: Bot, settings) -> None:
     @dp.errors()
     async def on_error(event: ErrorEvent) -> bool:
@@ -95,6 +109,7 @@ async def _run_polling(settings) -> None:
     try:
         await bot.delete_webhook(drop_pending_updates=True)
         await _set_commands(bot, settings)
+        _start_demo(bot, settings)
         # polling_timeout поменьше → быстрее восстановление после сетевого блипа
         await dp.start_polling(bot, polling_timeout=20)
     finally:
@@ -143,6 +158,7 @@ def _run_webhook(settings) -> None:
 
     async def on_startup(bot: Bot) -> None:
         scheduler.start()
+        _start_demo(bot, settings)
         # set_webhook нефатален, НО с автоповтором: прокси/сертификат (NPM) при
         # старте могут быть ещё не готовы — раньше это приводило к «тихому»
         # зависанию без вебхука. Теперь ретраим с нарастающей паузой + watchdog.

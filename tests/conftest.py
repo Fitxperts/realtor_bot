@@ -34,6 +34,23 @@ async def session():
     await engine.dispose()
 
 
+@pytest_asyncio.fixture
+async def make_harness(monkeypatch, tmp_path):
+    """Фабрика сквозного стенда (tests/flow.py): настоящий Dispatcher + поддельный Telegram."""
+    from tests.flow import Harness
+
+    created: list = []
+
+    async def factory(**settings):
+        harness = await Harness.create(monkeypatch, tmp_path, **settings)
+        created.append(harness)
+        return harness
+
+    yield factory
+    for harness in created:
+        harness.detach()
+
+
 class FakeBot:
     """Минимальный бот-заглушка для тестов публикации/уведомлений."""
 

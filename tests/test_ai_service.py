@@ -37,6 +37,23 @@ def test_generate_description_dollar_price_and_brand():
     assert "*Нархи:* —" in no_price and "— сўм" not in no_price
 
 
+@pytest.mark.parametrize(
+    "text,currency,floor",
+    [
+        ("Сдаётся 2 комнатная квартира Киргули 3/5 этаж мебель 300$ в месяц", "$", (3, 5)),
+        ("продам 3к 45000 у.е. 4/9", "$", (4, 9)),
+        ("2 xonali kvartira 400 dollar 2/4 qavat", "$", (2, 4)),
+        ("сдаётся 1к центр 2800000 сум", None, None),
+        ("продаю 1/2 доли дома", None, None),         # доля — не этаж
+        ("сдам с 25/12/2026, 2к", None, None),        # дата — не этаж
+    ],
+)
+def test_offline_currency_and_floor(text, currency, floor):
+    parsed = get_ai_service()._parse_regex(text)
+    assert parsed.get("currency") == currency
+    assert ((parsed["floor"], parsed["floors"]) if "floor" in parsed else None) == floor
+
+
 def test_parse_contacts():
     from bot.config import _parse_contacts
 

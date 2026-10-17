@@ -6,10 +6,13 @@ build/
 dist/
 
 .env
+.env.demo
 *.log
 
 media/
 backups/
+demo_media/
+demo_photos/
 
 .venv/
 venv/

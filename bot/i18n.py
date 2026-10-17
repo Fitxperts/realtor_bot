@@ -57,6 +57,8 @@ BUTTONS: dict[str, dict[str, str]] = {
     "yes": {"uz": "Ha", "ru": "Да", "en": "Yes"},
     "no": {"uz": "Yoʻq", "ru": "Нет", "en": "No"},
     "done": {"uz": "Tayyor", "ru": "Готово", "en": "Done"},
+    # Демо-бот
+    "demo_want": {"uz": "💼 Menga ham shunday bot", "ru": "💼 Хочу такой бот", "en": "💼 I want this bot"},
     # --- Админ-панель: reply-меню ---
     "adm_new": {"uz": "➕ Yangi obyekt", "ru": "➕ Новый объект", "en": "➕ New listing"},
     "adm_objects": {"uz": "📋 Obyektlar", "ru": "📋 Объекты", "en": "📋 Listings"},
@@ -112,6 +114,76 @@ def all_menu_texts() -> set[str]:
 # Сообщения: key -> {lang: text}
 # ---------------------------------------------------------------------------
 MESSAGES: dict[str, dict[str, str]] = {
+    # --- Демо-бот (DEMO_MODE) ---
+    "demo_welcome": {
+        "uz": "👋 <b>Bu RieltorBot demo versiyasi</b> — koʻchmas mulk agentliklari uchun Telegram-bot.\n\n"
+              "Hammasi haqiqiy ishlaydi, eʼlonlar — namuna. Sinab koʻring:\n"
+              "📋 <b>eʼlonlarni koʻring</b> va ariza qoldiring — agentlikka qanday kelishini koʻrasiz;\n"
+              "➕ <b>eʼlonni bitta xabar bilan joylang</b> (matn, skrinshot yoki ovozli xabar) — bot oʻzi "
+              "tahlil qilib, demo-kanalga chiqaradi;\n"
+              "💼 oʻz brendingiz ostida shunday bot kerakmi — «Menga ham shunday bot» tugmasini bosing.\n\n"
+              "<i>Demo maʼlumotlari har kecha tozalanadi.</i>",
+        "ru": "👋 <b>Это демо РиелторБота</b> — Telegram-бота для агентств недвижимости.\n\n"
+              "Всё работает по-настоящему, объявления — примеры. Попробуйте:\n"
+              "📋 <b>посмотреть объявления</b> и оставить заявку — увидите, как она приходит агентству;\n"
+              "➕ <b>разместить объявление одним сообщением</b> (текстом, скрином или голосом) — бот сам "
+              "разберёт его и опубликует в демо-канале;\n"
+              "💼 нужен такой бот под вашим брендом — нажмите «Хочу такой бот».\n\n"
+              "<i>Данные демо очищаются каждую ночь.</i>",
+        "en": "👋 <b>This is the RealtorBot demo</b> — a Telegram bot for real-estate agencies.\n\n"
+              "Everything works for real, the listings are samples. Try:\n"
+              "📋 <b>browse listings</b> and leave a request — see how it reaches the agency;\n"
+              "➕ <b>post a listing in one message</b> (text, screenshot or voice) — the bot parses it "
+              "and publishes it to the demo channel;\n"
+              "💼 want this bot under your brand — tap “I want this bot”.\n\n"
+              "<i>Demo data is cleared every night.</i>",
+    },
+    "demo_want_ask": {
+        "uz": "Ajoyib! 🙌 Telefon raqamingizni qoldiring — agentligingiz uchun botni qanday ulashni "
+              "koʻrsatamiz va savollarga javob beramiz.",
+        "ru": "Отлично! 🙌 Оставьте номер телефона — покажем, как подключить такой бот для вашего "
+              "агентства, и ответим на вопросы.",
+        "en": "Great! 🙌 Leave your phone number — we’ll show how to launch this bot for your agency "
+              "and answer your questions.",
+    },
+    "demo_want_thanks": {
+        "uz": "✅ Rahmat! Tez orada siz bilan bogʻlanamiz.",
+        "ru": "✅ Спасибо! Свяжемся с вами в ближайшее время.",
+        "en": "✅ Thank you! We’ll contact you shortly.",
+    },
+    "demo_published": {
+        "uz": "✅ <b>Tayyor!</b> {id} eʼloni demo-kanalga chiqdi:\n{link}\n\n"
+              "Ishchi botda eʼlon avval agentlik tekshiruviga keladi — administratorda bu shunday koʻrinadi 👇",
+        "ru": "✅ <b>Готово!</b> Объявление {id} опубликовано в демо-канале:\n{link}\n\n"
+              "В рабочем боте оно сначала приходит агентству на проверку — у администратора это выглядит так 👇",
+        "en": "✅ <b>Done!</b> Listing {id} is published in the demo channel:\n{link}\n\n"
+              "In a live bot it first goes to the agency for review — this is what the admin sees 👇",
+    },
+    "demo_saved": {
+        "uz": "✅ {id} eʼloni saqlandi. Agentlik administratori uni shunday koʻradi 👇",
+        "ru": "✅ Объявление {id} сохранено. Администратор агентства видит его так 👇",
+        "en": "✅ Listing {id} is saved. This is how the agency admin sees it 👇",
+    },
+    "demo_lead_view": {
+        "uz": "👀 <b>Agentlik arizangizni shunday koʻradi</b> — darhol keladi va CRMga tushadi:",
+        "ru": "👀 <b>Так вашу заявку видит агентство</b> — приходит мгновенно и попадает в CRM:",
+        "en": "👀 <b>This is how the agency sees your request</b> — instantly, straight into the CRM:",
+    },
+    "demo_limit": {
+        "uz": "Demoda kuniga {n} tagacha eʼlon joylash mumkin. Ertaga yana sinab koʻring 🙂",
+        "ru": "В демо можно разместить до {n} объявлений в день. Завтра можно снова 🙂",
+        "en": "The demo allows up to {n} listings a day. Try again tomorrow 🙂",
+    },
+    "demo_mod_header": {
+        "uz": "🆕 <b>Moderatsiyaga yangi obyekt</b>",
+        "ru": "🆕 <b>Объект на модерацию</b>",
+        "en": "🆕 <b>New listing for review</b>",
+    },
+    "demo_noop": {
+        "uz": "Bu agentlik administratori tugmalari — demoda faqat koʻrsatish uchun 🙂",
+        "ru": "Это кнопки администратора агентства — в демо они для показа 🙂",
+        "en": "These are the agency admin’s buttons — in the demo they’re for show 🙂",
+    },
     # --- Язык / роль / меню ---
     "choose_language": {
         "uz": "Tilni tanlang:",

@@ -1,0 +1,25 @@
+# Демо-бот для продаж: отдельный бот и канал, своя база realtor_demo на том же
+# Postgres, свой Redis-индекс. Работает в режиме polling (вебхук не нужен).
+#
+# 1) cp .env.demo.example .env.demo  и заполни (токен демо-бота, демо-канал)
+# 2) добавь docker-compose.demo.yml в COMPOSE_FILE в .env (через двоеточие)
+# 3) docker compose up -d --build demo
+#
+# Реальные фото для примеров (необязательно): папка demo_photos/ рядом,
+# имена apartment_*.jpg, house_*.jpg, land_*.jpg, commercial_*.jpg.
+services:
+  demo:
+    build: .
+    env_file:
+      - .env        # общие ключи ИИ, ADMIN_TELEGRAM_ID (демо-лиды придут тебе)
+      - .env.demo   # своё: BOT_TOKEN, CHANNEL_ID, база, DEMO_MODE (перекрывает .env)
+    command: ["sh", "-c", "python -m bot.ensure_db && alembic upgrade head && python -m bot.main"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./demo_media:/app/media
+      - ./demo_photos:/app/demo_photos:ro
