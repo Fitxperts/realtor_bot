@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RieltorBot — Telegram-bot koʻchmas mulk agentligi uchun</title>
+<meta name="description" content="Eʼlonlar, arizalar va mijozlar — bitta Telegram-botda. Объявления, заявки и клиенты агентства недвижимости — в одном Telegram-боте.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="RieltorBot — Telegram-bot для агентства недвижимости">
+<meta property="og:description" content="Объявление одним сообщением → красивый пост в канале. Каталог, заявки и CRM прямо в Telegram. Попробуйте демо.">
+<meta property="og:image" content="{{OG_IMAGE}}">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232AABEE'/%3E%3Cpath d='M16 34 32 18l16 16v14H36V38h-8v10H16z' fill='white'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#f6f8fb;--card:#fff;--text:#0f1b2d;--muted:#5b6b80;--line:#e3e9f1;--accent:#2AABEE;--accent-d:#1d8fcc;--ok:#1f9d55;--shadow:0 10px 30px rgba(15,27,45,.08)}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1520;--card:#142030;--text:#e8eef6;--muted:#9fb0c4;--line:#22344a;--shadow:0 10px 30px rgba(0,0,0,.35)}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+html[lang=uz] .ru,html[lang=ru] .uz{display:none!important}
+a{color:var(--accent-d)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;justify-content:space-between;height:60px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--text);text-decoration:none}
+.logo i{width:32px;height:32px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:#fff;font-style:normal}
+.lang{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.lang button{border:0;background:transparent;color:var(--muted);padding:6px 12px;font:600 14px inherit;cursor:pointer}
+html[lang=uz] .lang [data-l=uz],html[lang=ru] .lang [data-l=ru]{background:var(--accent);color:#fff}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:56px 0 40px}
+h1{font-size:44px;line-height:1.12;margin:0 0 16px;letter-spacing:-.02em}
+.lead{font-size:19px;color:var(--muted);margin:0 0 28px}
+.cta{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 22px;border-radius:12px;font-weight:650;text-decoration:none;border:2px solid var(--accent)}
+.btn.primary{background:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-d);border-color:var(--accent-d)}
+.btn.ghost{color:var(--accent-d);background:transparent}
+.note{margin-top:14px;color:var(--muted);font-size:14px}
+.phone{background:var(--card);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);padding:16px;max-width:380px;margin-left:auto}
+.chat-h{display:flex;align-items:center;gap:10px;padding:4px 6px 12px;border-bottom:1px solid var(--line);margin-bottom:12px;font-weight:650}
+.chat-h i{width:34px;height:34px;border-radius:50%;background:var(--accent);display:grid;place-items:center;color:#fff;font-style:normal}
+.msg{padding:10px 12px;border-radius:14px;margin:8px 0;font-size:14px;max-width:88%}
+.me{background:#e1f4ff;color:#0f1b2d;margin-left:auto;border-bottom-right-radius:4px}
+.bot{background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:4px}
+.post{border-left:3px solid var(--accent);padding-left:10px;margin-top:6px}
+.kb{display:inline-block;margin-top:8px;padding:6px 10px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px}
+section{padding:44px 0}
+h2{font-size:30px;margin:0 0 8px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 28px}
+.pains{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.pain{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+.card b{display:block;font-size:17px;margin:8px 0 6px}.card p{margin:0;color:var(--muted);font-size:15px}
+.ico{font-size:26px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:s}
+.step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 20px 20px 64px;position:relative}
+.step:before{counter-increment:s;content:counter(s);position:absolute;left:18px;top:18px;width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700}
+.video{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.prices{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.price{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;display:flex;flex-direction:column}
+.price.hot{border:2px solid var(--accent);box-shadow:var(--shadow)}
+.price h3{margin:0 0 4px;font-size:20px}.price .sum{font-size:32px;font-weight:750;margin:6px 0 2px}
+.price .uzs{color:var(--muted);font-size:14px;margin-bottom:14px}
+.price ul{margin:0 0 18px;padding-left:18px;color:var(--muted);font-size:15px}.price li{margin:4px 0}
+.price .btn{margin-top:auto;justify-content:center}
+.pilot{margin-top:18px;background:linear-gradient(90deg,#2AABEE22,#2AABEE08);border:1px solid var(--line);border-radius:16px;padding:16px 20px}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin:10px 0}
+summary{cursor:pointer;font-weight:650}details p{color:var(--muted);margin:10px 0 0}
+.final{text-align:center;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:40px 20px;box-shadow:var(--shadow)}
+.final .cta{justify-content:center}
+footer{padding:28px 0 40px;color:var(--muted);font-size:14px;text-align:center}
+@media (max-width:860px){.hero{grid-template-columns:1fr;padding-top:32px}.phone{margin:0 auto}h1{font-size:32px}
+.pains,.grid,.steps,.prices{grid-template-columns:1fr}h2{font-size:25px}}
+</style>
+</head>
+<body>
+<header><div class="wrap bar">
+  <a class="logo" href="#"><i>🏠</i>RieltorBot</a>
+  <div class="lang"><button data-l="uz">UZ</button><button data-l="ru">RU</button></div>
+</div></header>
+
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <h1><span class="uz">Eʼlonlar, arizalar va mijozlar — bitta Telegram-botda</span><span class="ru">Объявления, заявки и клиенты — в одном Telegram-боте</span></h1>
+      <p class="lead"><span class="uz">Egasi eʼlonni bitta xabar bilan yuboradi — bot oʻzi tahlil qilib, kanalingizga chiroyli post qilib chiqaradi. Mijoz botda eʼlonlarni koʻradi va ariza qoldiradi — ariza darhol sizga keladi.</span><span class="ru">Собственник присылает объявление одним сообщением — бот сам разбирает его и публикует красивым постом в ваш канал. Клиент листает объекты в боте и оставляет заявку — она мгновенно приходит вам.</span></p>
+      <div class="cta">
+        <a class="btn primary" href="{{DEMO_URL}}" target="_blank" rel="noopener"><span class="uz">▶ Demoni sinab koʻrish</span><span class="ru">▶ Попробовать демо</span></a>
+        <a class="btn ghost" href="{{CONTACT_URL}}" target="_blank" rel="noopener"><span class="uz">Bogʻlanish</span><span class="ru">Связаться</span></a>
+      </div>
+      <p class="note"><span class="uz">14 kun bepul sinov · oʻrnatish shart emas — hammasi Telegramda</span><span class="ru">14 дней бесплатно · ничего не нужно устанавливать — всё в Telegram</span></p>
+    </div>
+    <div class="phone" aria-hidden="true">
+      <div class="chat-h"><i>🏠</i>RieltorBot</div>
+      <div class="msg me">2 xonali kvartira ijaraga, Qirguli bozori yonida, 3/5 qavat, mebel bor, 300$ · +998 90 123 45 67</div>
+      <div class="msg bot"><span class="uz">✅ Eʼlon tahlil qilindi: kvartira · ijara · Qirguli · 2 xona · $300. Kanalga chiqdi:</span><span class="ru">✅ Объявление разобрано: квартира · аренда · Киргули · 2 комн. · $300. Опубликовано в канале:</span>
+        <div class="post"><b>🏢 КВАРТИРА ИЖАРАГА БЕРИЛАДИ</b><br>📍 Қирғули, бозор ёнида · 🚪 2 хона (3/5)<br>💰 300 $</div>
+        <span class="kb">✍️ Ariza qoldirish · Оставить заявку</span>
+      </div>
+      <div class="msg bot">🎯 <span class="uz"><b>Yangi ariza</b> — APT_1024 boʻyicha, mijoz raqami bilan</span><span class="ru"><b>Новая заявка</b> по APT_1024 — с телефоном клиента</span></div>
+    </div>
+  </div>
+
+  <section>
+    <h2><span class="uz">Tanishmi?</span><span class="ru">Знакомо?</span></h2>
+    <p class="sub"><span class="uz">Agentlik vaqti eʼlonlar bilan yozishmaga ketadi, mijozlar esa javob kutmaydi.</span><span class="ru">Время агентства уходит на переписку, а клиенты не ждут ответа.</span></p>
+    <div class="pains">
+      <div class="pain">📩 <span class="uz">Eʼlonlar lichkaga har xil koʻrinishda keladi — ularni qayta yozish va bezashga soatlar ketadi.</span><span class="ru">Объявления приходят в личку в разном виде — часы уходят на перепечатку и оформление.</span></div>
+      <div class="pain">⏳ <span class="uz">Mijozlar «hali bormi?» deb yozadi, siz esa ulgurmaysiz — mijoz raqobatchiga ketadi.</span><span class="ru">Клиенты пишут «ещё актуально?», а вы не успеваете — и клиент уходит к конкурентам.</span></div>
+      <div class="pain">🗂 <span class="uz">Arizalar chatlarda yoʻqoladi — kim qayerdan kelgani nomaʼlum.</span><span class="ru">Заявки теряются в чатах — непонятно, кто откуда пришёл и кому перезвонить.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="uz">Bot nima qiladi</span><span class="ru">Что умеет бот</span></h2>
+    <p class="sub"><span class="uz">Hammasi ishlab turibdi — demoda sinab koʻring.</span><span class="ru">Всё уже работает — проверьте в демо.</span></p>
+    <div class="grid">
+      <div class="card"><span class="ico">✍️</span><b><span class="uz">Eʼlon bitta xabar bilan</span><span class="ru">Объявление одним сообщением</span></b><p><span class="uz">Matn, skrinshot yoki ovozli xabar — oʻzbekcha, ruscha, aralash, xatolar bilan. Sunʼiy intellekt narx, tuman, xonalar va telefonni ajratadi.</span><span class="ru">Текст, скриншот или голосовое — на узбекском, русском, вперемешку, с ошибками. ИИ сам вытащит цену, район, комнаты и телефон.</span></p></div>
+      <div class="card"><span class="ico">📢</span><b><span class="uz">Kanalga avtopost</span><span class="ru">Автопост в канал</span></b><p><span class="uz">Agentlik uslubidagi bir xil post, fotoda suv belgisi, har bir post ostida «Ariza qoldirish» tugmasi.</span><span class="ru">Единый стиль агентства, водяной знак на фото, кнопка «Оставить заявку» под каждым постом.</span></p></div>
+      <div class="card"><span class="ico">📋</span><b><span class="uz">Botdagi katalog</span><span class="ru">Каталог в боте</span></b><p><span class="uz">Mijoz obyektlarni fotosuratlari bilan koʻradi: ijara yoki sotuv — va bitta tugma bilan ariza qoldiradi.</span><span class="ru">Клиент листает объекты с фото: аренда или продажа — и оставляет заявку одной кнопкой.</span></p></div>
+      <div class="card"><span class="ico">🎯</span><b><span class="uz">Arizalar va CRM</span><span class="ru">Заявки и CRM</span></b><p><span class="uz">Ariza darhol sizga keladi. Mijoz holatlari, uchrashuvlar va ular haqida eslatmalar.</span><span class="ru">Заявка приходит мгновенно. Статусы клиентов, встречи и напоминания о них.</span></p></div>
+      <div class="card"><span class="ico">🔔</span><b><span class="uz">Avto-tanlov</span><span class="ru">Автоподбор</span></b><p><span class="uz">Mijoz soʻrov qoldiradi — mos yangi obyekt chiqqanda bot oʻzi xabar beradi.</span><span class="ru">Клиент оставляет запрос — бот сам пришлёт подходящий новый объект.</span></p></div>
+      <div class="card"><span class="ico">🔁</span><b><span class="uz">Hamkor kanallardan avto-repost</span><span class="ru">Авторепост из каналов партнёров</span></b><p><span class="uz">Bot manba kanallarni oʻqiydi, eʼlonlarni tahlil qilib, tekshiruvga yuboradi.</span><span class="ru">Бот читает каналы-источники, разбирает объявления и отдаёт вам на проверку.</span></p></div>
+      <div class="card"><span class="ico">🧹</span><b><span class="uz">Dublikatlarni tekshirish va koʻtarish</span><span class="ru">Дубли и автоподнятие</span></b><p><span class="uz">Bir xil obyekt ikki marta chiqmaydi; dolzarb eʼlonlar har 3 kunda yuqoriga koʻtariladi.</span><span class="ru">Один объект не выйдет дважды; актуальные объявления поднимаются в канале каждые 3 дня.</span></p></div>
+      <div class="card"><span class="ico">📊</span><b><span class="uz">Statistika va Excel</span><span class="ru">Статистика и Excel</span></b><p><span class="uz">Obyektlar va mijozlar boʻyicha statistika, Excel/CSV ga yuklab olish.</span><span class="ru">Статистика по объектам и клиентам, выгрузка в Excel/CSV.</span></p></div>
+      <div class="card"><span class="ico">🛡</span><b><span class="uz">Ishonchlilik</span><span class="ru">Надёжность</span></b><p><span class="uz">Zaxira AI-provayderlar, har kecha bazaning zaxira nusxasi, nosozlik haqida darhol xabar.</span><span class="ru">Резервные ИИ-провайдеры, ночные копии базы, мгновенное оповещение о сбоях.</span></p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="uz">Qanday ishlaydi</span><span class="ru">Как это работает</span></h2>
+    <p class="sub"><span class="uz">Sizning brendingiz: nom, kontaktlar, suv belgisi va kanal — sizniki.</span><span class="ru">Под вашим брендом: название, контакты, водяной знак и канал — ваши.</span></p>
+    <div class="steps">
+      <div class="step"><span class="uz">Botingiz va kanalingizni ulaymiz, uslub va kontaktlarni sozlaymiz.</span><span class="ru">Подключаем ваш бот и канал, настраиваем стиль поста и контакты.</span></div>
+      <div class="step"><span class="uz">Egalar va hamkorlar eʼlon yuboradi — bot tahlil qilib, kanalga chiqaradi.</span><span class="ru">Собственники и партнёры присылают объявления — бот разбирает и публикует.</span></div>
+      <div class="step"><span class="uz">Mijozlar ariza qoldiradi — siz bitim tuzasiz.</span><span class="ru">Клиенты оставляют заявки — вы закрываете сделки.</span></div>
+    </div>
+  </section>
+{{VIDEO_BLOCK}}
+  <section id="price">
+    <h2><span class="uz">Tariflar</span><span class="ru">Тарифы</span></h2>
+    <p class="sub"><span class="uz">Oylik toʻlov, istalgan vaqtda toʻxtatish mumkin.</span><span class="ru">Помесячно, отменить можно в любой момент.</span></p>
+    <div class="prices">
+      <div class="price"><h3><span class="uz">Start</span><span class="ru">Старт</span></h3><div class="sum">$35<small>/<span class="uz">oy</span><span class="ru">мес</span></small></div><div class="uzs"><span class="uz">≈ 420 000 soʻm</span><span class="ru">≈ 420 000 сум</span></div>
+        <ul><li><span class="uz">Oʻz botingiz va kanalingiz</span><span class="ru">Свой бот и канал</span></li><li><span class="uz">100 tagacha obyekt</span><span class="ru">До 100 объектов</span></li><li><span class="uz">Katalog, arizalar, CRM</span><span class="ru">Каталог, заявки, CRM</span></li><li><span class="uz">Suv belgisi va avtopost</span><span class="ru">Водяной знак и автопост</span></li></ul>
+        <a class="btn ghost" href="{{CONTACT_URL}}" target="_blank" rel="noopener"><span class="uz">Ulash</span><span class="ru">Подключить</span></a></div>
+      <div class="price hot"><h3>Pro</h3><div class="sum">$49<small>/<span class="uz">oy</span><span class="ru">мес</span></small></div><div class="uzs"><span class="uz">≈ 590 000 soʻm</span><span class="ru">≈ 590 000 сум</span></div>
+        <ul><li><span class="uz">Start’dagi hammasi</span><span class="ru">Всё из «Старт»</span></li><li><span class="uz">Hamkor kanallardan avto-repost</span><span class="ru">Авторепост из каналов партнёров</span></li><li><span class="uz">Skrinshot va ovozli eʼlonlar</span><span class="ru">Объявления со скринов и голосом</span></li><li><span class="uz">Statistika, 3 ta administrator</span><span class="ru">Статистика, 3 администратора</span></li></ul>
+        <a class="btn primary" href="{{CONTACT_URL}}" target="_blank" rel="noopener"><span class="uz">Ulash</span><span class="ru">Подключить</span></a></div>
+      <div class="price"><h3><span class="uz">Tarmoq</span><span class="ru">Сеть</span></h3><div class="sum"><span class="uz">$80 dan</span><span class="ru">от $80</span></div><div class="uzs"><span class="uz">filiallar soniga qarab</span><span class="ru">зависит от числа филиалов</span></div>
+        <ul><li><span class="uz">Bir nechta filial va kanal</span><span class="ru">Несколько филиалов и каналов</span></li><li><span class="uz">Ustuvor yordam</span><span class="ru">Приоритетная поддержка</span></li><li><span class="uz">Individual sozlash</span><span class="ru">Индивидуальная настройка</span></li></ul>
+        <a class="btn ghost" href="{{CONTACT_URL}}" target="_blank" rel="noopener"><span class="uz">Bogʻlanish</span><span class="ru">Связаться</span></a></div>
+    </div>
+    <div class="pilot"><b><span class="uz">14 kun bepul sinov.</span><span class="ru">14 дней бесплатно.</span></b> <span class="uz">Ulash va sozlash — bir martalik, $150 dan (bot, kanal, post shabloni, oʻqitish).</span><span class="ru">Подключение и настройка — разово, от $150 (бот, канал, шаблон поста, обучение).</span></div>
+  </section>
+
+  <section>
+    <h2><span class="uz">Savollar</span><span class="ru">Вопросы</span></h2>
+    <details><summary><span class="uz">Biror narsa oʻrnatish kerakmi?</span><span class="ru">Нужно ли что-то устанавливать?</span></summary><p><span class="uz">Yoʻq. Hammasi Telegramda: siz, egalar va mijozlar uchun.</span><span class="ru">Нет. Всё работает в Telegram — и для вас, и для собственников, и для клиентов.</span></p></details>
+    <details><summary><span class="uz">Bot va kanal kimniki boʻladi?</span><span class="ru">Чьи будут бот и канал?</span></summary><p><span class="uz">Sizniki: bot sizning akkauntingizda yaratiladi, kanal ham sizniki. Maʼlumotlarni istalgan vaqtda Excelga yuklab olasiz.</span><span class="ru">Ваши: бот создаётся на ваш аккаунт, канал тоже ваш. Данные можно выгрузить в Excel в любой момент.</span></p></details>
+    <details><summary><span class="uz">Bot oʻzbek tilini tushunadimi?</span><span class="ru">Понимает ли бот узбекский?</span></summary><p><span class="uz">Ha: lotin va kirill yozuvi, rus tili, aralash matn, jargon va ovozli xabarlar.</span><span class="ru">Да: латиница и кириллица, русский, смесь языков, сленг и голосовые сообщения.</span></p></details>
+    <details><summary><span class="uz">AI ishlamay qolsa-chi?</span><span class="ru">А если ИИ не работает?</span></summary><p><span class="uz">Bot avtomatik ravishda zaxira provayderga oʻtadi; eng yomon holatda eʼlonni AI’siz tahlil qiladi. Nosozlik haqida darhol xabar olasiz.</span><span class="ru">Бот сам переключается на резервного провайдера, в крайнем случае разбирает объявление без ИИ. О сбое вы узнаёте сразу.</span></p></details>
+    <details><summary><span class="uz">Qanday sinab koʻrsam boʻladi?</span><span class="ru">Как попробовать?</span></summary><p><span class="uz">Demo-botni oching — hammasi haqiqiy ishlaydi: eʼlonlarni koʻring, ariza qoldiring, oʻz eʼloningizni joylang.</span><span class="ru">Откройте демо-бота — всё работает по-настоящему: листайте объявления, оставьте заявку, разместите своё объявление.</span></p></details>
+  </section>
+
+  <section>
+    <div class="final">
+      <h2><span class="uz">Bot qanday ishlashini 2 daqiqada koʻring</span><span class="ru">Посмотрите, как работает бот, за 2 минуты</span></h2>
+      <p class="sub"><span class="uz">Demo-bot sizning telefoningizda — eʼlon joylang va ariza qoldiring.</span><span class="ru">Демо-бот на вашем телефоне — разместите объявление и оставьте заявку.</span></p>
+      <div class="cta">
+        <a class="btn primary" href="{{DEMO_URL}}" target="_blank" rel="noopener"><span class="uz">▶ Demoni ochish</span><span class="ru">▶ Открыть демо</span></a>
+        <a class="btn ghost" href="{{CONTACT_URL}}" target="_blank" rel="noopener"><span class="uz">Savol berish</span><span class="ru">Задать вопрос</span></a>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>© 2026 RieltorBot · <span class="uz">Fargʻona, Oʻzbekiston</span><span class="ru">Фергана, Узбекистан</span></footer>
+<script>
+(function () {
+  var root = document.documentElement;
+  function set(l) { root.lang = l; try { localStorage.setItem("lang", l); } catch (e) {} }
+  var saved = null;
+  try { saved = localStorage.getItem("lang"); } catch (e) {}
+  set(saved || ((navigator.language || "").slice(0, 2) === "ru" ? "ru" : "uz"));
+  document.querySelectorAll(".lang button").forEach(function (b) {
+    b.addEventListener("click", function () { set(b.getAttribute("data-l")); });
+  });
+})();
+</script>
+</body>
+</html>

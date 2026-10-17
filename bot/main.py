@@ -19,6 +19,7 @@ from bot.middlewares.i18n import LanguageMiddleware
 from bot.middlewares.throttling import ThrottlingMiddleware
 from bot.net_session import RobustSession
 from bot.services.scheduler import setup_scheduler
+from bot.web.landing import register_landing
 
 _COMMANDS = [
     BotCommand(command="start", description="Начать / меню"),
@@ -217,6 +218,7 @@ def _run_webhook(settings) -> None:
 
     app = web.Application()
     app.router.add_get("/health", health)
+    register_landing(app)  # https://<домен>/ — страница продукта для агентств
     SimpleRequestHandler(dispatcher=dp, bot=bot, secret_token=secret).register(
         app, path=settings.webhook_path
     )

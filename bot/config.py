@@ -128,6 +128,11 @@ class Settings:
         self.demo_photos_dir: str = os.getenv("DEMO_PHOTOS_DIR", "/app/demo_photos").strip()
         self.demo_daily_limit: int = int(os.getenv("DEMO_DAILY_LIMIT", "3") or 3)
 
+        # Лендинг на домене бота (режим webhook): ссылки кнопок страницы
+        self.landing_demo_url: str = os.getenv("LANDING_DEMO_URL", "").strip()
+        self.landing_contact_url: str = os.getenv("LANDING_CONTACT_URL", "").strip()
+        self.landing_video_url: str = os.getenv("LANDING_VIDEO_URL", "").strip()  # youtube.com/embed/…
+
         # Константы (дублируем на объекте настроек для удобного доступа)
         self.timezone: str = TIMEZONE
         self.bump_interval_days: int = BUMP_INTERVAL_DAYS
