@@ -12,6 +12,7 @@ ignore = ["E501", "B008", "UP042"]
 "bot/services/demo.py" = ["C408"]
 
 [tool.pytest.ini_options]
+pythonpath = ["."]   # `pytest` (в CI) без этого не видит пакет bot — работало только `python -m pytest`
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]

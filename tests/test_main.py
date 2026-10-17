@@ -12,8 +12,9 @@ def test_build_returns_bot_dispatcher_with_routers():
         assert isinstance(dp, Dispatcher)
         assert dp.sub_routers, "роутеры должны быть зарегистрированы"
     finally:
-        # закрывать сессии не нужно — объекты ленивые, сеть не трогалась
-        pass
+        # сеть не трогалась; роутеры отцепляем — их подключают и сквозные тесты (tests/flow.py)
+        for router in dp.sub_routers:
+            router._parent_router = None
 
 
 def test_default_mode_is_polling():
