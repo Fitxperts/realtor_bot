@@ -126,9 +126,19 @@ def _build(settings) -> tuple[Bot, Dispatcher, RedisStorage]:
     return bot, dp, storage
 
 
+def _platform(settings, storage):
+    """Бот платформы, если задан PLATFORM_BOT_TOKEN (иначе None)."""
+    if not settings.platform_bot_token:
+        return None, None
+    from bot.platform.runtime import build_platform
+
+    return build_platform(settings.platform_bot_token, storage)
+
+
 async def _run_polling(settings) -> None:
     bot, dp, storage = _build(settings)
     await _load_platform()
+    platform_bot, platform_dp = _platform(settings, storage)
     scheduler = setup_scheduler(bot)
     scheduler.start()
     all_bots = bots.agency_bots()
@@ -140,12 +150,18 @@ async def _run_polling(settings) -> None:
         _start_demo(bot, settings)
         # polling_timeout поменьше → быстрее восстановление после сетевого блипа.
         # Новые агентства в режиме polling подхватываются после перезапуска.
-        await dp.start_polling(*all_bots.values(), polling_timeout=20)
+        runners = [dp.start_polling(*all_bots.values(), polling_timeout=20)]
+        if platform_bot is not None:
+            await platform_bot.delete_webhook(drop_pending_updates=True)
+            runners.append(platform_dp.start_polling(platform_bot, polling_timeout=20, handle_signals=False))
+        await asyncio.gather(*runners)
     finally:
         scheduler.shutdown(wait=False)
         await storage.close()
         for agency_bot in all_bots.values():
             await agency_bot.session.close()
+        if platform_bot is not None:
+            await platform_bot.session.close()
         logger.info("РиелторБот остановлен")
 
 
@@ -161,6 +177,8 @@ def _run_webhook(settings) -> None:
     bot, dp, storage = _build(settings)
     scheduler = setup_scheduler(bot)
     webhook_url = settings.webhook_url.rstrip("/") + settings.webhook_path
+    platform_bot, platform_dp = _platform(settings, storage)
+    platform_path = settings.webhook_path.rstrip("/") + "/platform"
 
     def url_for(agency_id: int) -> str:
         return settings.webhook_url.rstrip("/") + agency_path(settings.webhook_path, agency_id)
@@ -223,6 +241,14 @@ def _run_webhook(settings) -> None:
                          "попытки. Проверьте домен/NPM/сертификат.", list(pending))
         task = asyncio.create_task(_webhook_watchdog())
         _background.add(task)
+        if platform_bot is not None:
+            try:
+                await platform_bot.set_webhook(
+                    settings.webhook_url.rstrip("/") + platform_path, secret_token=settings.webhook_secret or None,
+                    drop_pending_updates=True, allowed_updates=platform_dp.resolve_used_update_types())
+                logger.info("Бот платформы подключён: %s", platform_path)
+            except Exception as exc:  # noqa: BLE001
+                logger.error("Бот платформы: webhook не установлен (%s)", exc)
 
     async def on_shutdown(bot: Bot) -> None:
         bots.set_activation_hook(None)
@@ -283,6 +309,9 @@ def _run_webhook(settings) -> None:
         app, path=settings.webhook_path
     )
     AgencyRequestHandler(dispatcher=dp).register_routes(app, settings.webhook_path)  # /webhook/a<id>
+    if platform_bot is not None:  # /webhook/platform — онбординг агентств и супер-админка
+        SimpleRequestHandler(dispatcher=platform_dp, bot=platform_bot,
+                             secret_token=settings.webhook_secret or None).register(app, path=platform_path)
     setup_application(app, dp, bot=bot)
     web.run_app(app, host="0.0.0.0", port=settings.webhook_port)
 

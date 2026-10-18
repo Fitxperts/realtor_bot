@@ -17,6 +17,7 @@ from aiogram.client.session.base import BaseSession
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.methods import (
+    GetChatMember,
     GetMe,
     SendDocument,
     SendMediaGroup,
@@ -38,15 +39,21 @@ BOT_USER = User(id=4242, is_bot=True, first_name="Demo", username="demo_test_bot
 class FakeSession(BaseSession):
     """Вместо HTTP к Telegram — запись вызова и правдоподобный ответ."""
 
-    def __init__(self) -> None:
+    def __init__(self, me: User | None = None, member=None) -> None:
         super().__init__()
         self.calls: list[TelegramMethod] = []
         self._ids = itertools.count(1000)
+        self.me = me or BOT_USER
+        self.member = member          # ответ на getChatMember (None → ошибка «нет в канале»)
 
     async def make_request(self, bot: Bot, method: TelegramMethod, timeout: int | None = None):
         self.calls.append(method)
         if isinstance(method, GetMe):
-            return BOT_USER
+            return self.me
+        if isinstance(method, GetChatMember):
+            if self.member is None:
+                raise RuntimeError("Bad Request: chat not found")
+            return self.member
         if isinstance(method, SendMediaGroup):
             return [self._msg(method.chat_id) for _ in method.media]
         if isinstance(method, SendMessage | SendPhoto | SendDocument):
@@ -80,6 +87,10 @@ class Harness:
             await conn.run_sync(Base.metadata.create_all)
         maker = async_sessionmaker(engine, expire_on_commit=False)
         monkeypatch.setattr(db_session, "_sessionmaker", maker)
+        async with maker() as session:          # как миграция 0006: агентство №1 есть всегда
+            from bot.database.models import Agency
+            session.add(Agency(id=1, name="Агентство №1", status="active"))
+            await session.commit()
 
         cfg = get_settings()
         defaults = {"media_dir": str(tmp_path / "media"), "demo_photos_dir": str(tmp_path / "no_photos"),

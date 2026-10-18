@@ -44,7 +44,9 @@ class Agency(Base):
 
     __tablename__ = "agencies"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    # BIGINT в Postgres; в SQLite автонумерация работает только у INTEGER
+    id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True,
+                                    autoincrement=True)
     name: Mapped[str] = mapped_column(String(128))
     city: Mapped[str | None] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(16), default="active")   # active | disabled

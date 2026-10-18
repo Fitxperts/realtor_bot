@@ -128,6 +128,9 @@ class Settings:
         self.demo_photos_dir: str = os.getenv("DEMO_PHOTOS_DIR", "/app/demo_photos").strip()
         self.demo_daily_limit: int = int(os.getenv("DEMO_DAILY_LIMIT", "3") or 3)
 
+        # Бот платформы (онбординг агентств + супер-админка). Пусто → не запускается.
+        self.platform_bot_token: str = os.getenv("PLATFORM_BOT_TOKEN", "").strip()
+
         # Подписки на поиск: курс для сравнения цен в $ и сумах, лимит уведомлений
         self.usd_rate: float = float(os.getenv("USD_RATE", "12000") or 12000)
         self.alerts_daily_limit: int = int(os.getenv("ALERTS_DAILY_LIMIT", "5") or 5)
