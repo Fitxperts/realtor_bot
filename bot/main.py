@@ -23,7 +23,7 @@ from bot.logging_setup import init_sentry, setup_logging
 from bot.middlewares.db import DbSessionMiddleware
 from bot.middlewares.i18n import LanguageMiddleware
 from bot.middlewares.throttling import ThrottlingMiddleware
-from bot.services import payments
+from bot.services import payments, whatsapp
 from bot.services.scheduler import setup_scheduler
 from bot.tenancy import DEFAULT_AGENCY_ID, current_agency_id
 from bot.web.agency_webhook import AgencyRequestHandler, agency_path
@@ -309,6 +309,7 @@ def _run_webhook(settings) -> None:
     from bot.database.session import get_sessionmaker
 
     payments.register_routes(app, get_sessionmaker)  # /billing/payme, /billing/click/* — оплата подписки
+    whatsapp.register_routes(app, get_sessionmaker)  # /whatsapp/a<id> — входящие WhatsApp агентств
     SimpleRequestHandler(dispatcher=dp, bot=bot, secret_token=settings.webhook_secret or None).register(
         app, path=settings.webhook_path
     )

@@ -62,6 +62,11 @@ class Agency(Base):
     owner_telegram_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
     language: Mapped[str] = mapped_column(String(2), default="uz")
     districts: Mapped[str | None] = mapped_column(Text)                 # свои массивы (bot/services/geo.py)
+    # WhatsApp Cloud API (bot/services/whatsapp.py): номер, ключи (зашифрованы), verify token вебхука
+    wa_phone_id: Mapped[str | None] = mapped_column(String(32))
+    wa_token_enc: Mapped[str | None] = mapped_column(Text)
+    wa_secret_enc: Mapped[str | None] = mapped_column(Text)
+    wa_verify_token: Mapped[str | None] = mapped_column(String(64))
     # Подписка (bot/services/billing.py): пробный период → оплачено до → льгота → только чтение
     plan: Mapped[str] = mapped_column(String(16), default="start")       # start | pro | network
     trial_until: Mapped[dt.datetime | None] = mapped_column(DateTime())

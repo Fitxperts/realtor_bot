@@ -31,7 +31,7 @@ from bot.utils import timeutils
 logger = logging.getLogger(__name__)
 
 TYPES = ("catalog_view", "lead_click", "lead", "request", "listing", "listing_import", "published",
-         "alert_sent")
+         "alert_sent", "wa_lead")
 
 
 async def track(type_: str, *, telegram_id: int | None = None, property_id: str | None = None) -> None:
@@ -105,6 +105,8 @@ def format_report(cur: dict, prev: dict, top: list[tuple[str, int, int, int]], l
                        ("request", "an_requests"), ("listing", "an_listings"), ("listing_import", "an_imports"),
                        ("published", "an_published"), ("alert_sent", "an_alerts")):
         lines.append(f"{i18n.t(label, lang)}: <b>{cur[key]}</b>{_delta(cur[key], prev[key])}")
+    if cur["wa_lead"] or prev["wa_lead"]:      # строка только у агентств с подключённым WhatsApp
+        lines.append(f"{i18n.t('an_wa_leads', lang)}: <b>{cur['wa_lead']}</b>{_delta(cur['wa_lead'], prev['wa_lead'])}")
     lines += ["", i18n.t("an_conv", lang, click=_pct(cur["lead"], cur["lead_click"]),
                          view=_pct(cur["lead_click"], cur["catalog_view"]))]
     if top:

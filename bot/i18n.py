@@ -750,6 +750,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "an_conv": {"uz": "Konversiya: bosish → ariza {click} · koʻrish → bosish {view}",
                 "ru": "Конверсия: клик → заявка {click} · просмотр → клик {view}",
                 "en": "Conversion: tap → request {click} · view → tap {view}"},
+    "an_wa_leads": {"uz": "💬 WhatsApp xabarlari", "ru": "💬 Сообщения в WhatsApp", "en": "💬 WhatsApp messages"},
     "an_top": {"uz": "🏆 <b>Top obyektlar (30 kun)</b>", "ru": "🏆 <b>Топ объектов за 30 дней</b>",
                "en": "🏆 <b>Top listings (30 days)</b>"},
     "an_top_line": {"uz": "<code>{id}</code> — 👀 {views} · ✍️ {clicks} · 🎯 {leads}",

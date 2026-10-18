@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.agency_config import from_row, register
 from bot.config import get_settings
 from bot.database.models import Agency, Client, Event, Property, PropertyStatus
-from bot.services import billing, payments
+from bot.services import billing, payments, whatsapp
 from bot.tenancy import ALL_AGENCIES
 from bot.utils import timeutils
 
@@ -122,3 +122,41 @@ async def toggle(callback: CallbackQuery, session: AsyncSession) -> None:
     register(from_row(row))  # бот агентства сразу перестаёт / начинает отвечать
     await callback.answer("Готово")
     await callback.message.edit_text(_card(row), reply_markup=_toggle_kb(row))
+
+
+@router.message(Command("whatsapp"))
+async def setup_whatsapp(message: Message, command: CommandObject, session: AsyncSession) -> None:
+    """/whatsapp N <phone_number_id> <access_token> <app_secret> | /whatsapp N off | /whatsapp N."""
+    args = (command.args or "").split()
+    usage = ("Использование:\n/whatsapp &lt;N&gt; — статус\n"
+             "/whatsapp &lt;N&gt; &lt;phone_number_id&gt; &lt;access_token&gt; &lt;app_secret&gt; — подключить\n"
+             "/whatsapp &lt;N&gt; off — отключить")
+    row = await session.get(Agency, int(args[0])) if args and args[0].isdigit() else None
+    if row is None or len(args) not in (1, 2, 4) or (len(args) == 2 and args[1] != "off"):
+        await message.answer(usage)
+        return
+    base = get_settings().webhook_url.rstrip("/")
+    url = f"{base}/whatsapp/a{row.id}" if base else f"/whatsapp/a{row.id} (нужен WEBHOOK_URL)"
+    if len(args) == 4:
+        try:
+            await message.delete()                      # в сообщении ключи — убираем из чата
+        except Exception:  # noqa: BLE001
+            pass
+        if not args[1].isdigit():
+            await message.answer("phone_number_id — число из кабинета Meta (WhatsApp → API Setup).")
+            return
+        verify = whatsapp.configure(row, args[1], args[2], args[3])
+        await session.commit()
+        await message.answer(f"✅ WhatsApp агентства #{row.id} подключён (ключи зашифрованы, сообщение удалено).\n\n"
+                             f"В кабинете Meta → WhatsApp → Configuration → Webhook:\n"
+                             f"Callback URL: <code>{escape(url)}</code>\nVerify token: <code>{verify}</code>\n"
+                             f"Подписка (Webhook fields): <b>messages</b>")
+        return
+    if len(args) == 2:
+        whatsapp.disable(row)
+        await session.commit()
+        await message.answer(f"⏸ WhatsApp агентства #{row.id} отключён.")
+        return
+    status = (f"✅ подключён, номер (phone_number_id) {escape(row.wa_phone_id)}\nCallback URL: <code>{escape(url)}</code>"
+              if row.wa_phone_id else "не подключён")
+    await message.answer(f"💬 WhatsApp агентства #{row.id} {escape(row.name)}: {status}\n\n{usage}")
