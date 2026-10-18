@@ -241,7 +241,7 @@ async def _payme_order(session: AsyncSession, params: dict) -> Payment:
     payment = await _get_locked(session, order_id)
     if payment is None:
         raise _payme_err_account()
-    if not isinstance(params.get("amount"), (int, float)) or int(params["amount"]) != payment.amount * 100:
+    if not isinstance(params.get("amount"), int | float) or int(params["amount"]) != payment.amount * 100:
         raise PaymeError(-31001, "Неверная сумма", "Notoʻgʻri summa", "Incorrect amount")
     return payment
 
@@ -303,7 +303,7 @@ async def payme_dispatch(session: AsyncSession, method: str, params: dict) -> di
         if payment.state != NEW:                                   # по счёту уже другая транзакция
             raise _payme_err_account("Счёт уже оплачивается или закрыт", "Hisob band yoki yopilgan",
                                      "Order is busy or closed")
-        if not isinstance(ext_id, str) or not ext_id or not isinstance(params.get("time"), (int, float)):
+        if not isinstance(ext_id, str) or not ext_id or not isinstance(params.get("time"), int | float):
             raise PaymeError(-32600, "Неверные параметры", en="Invalid params")
         if now_ms() - int(params["time"]) >= PAYME_TIMEOUT_MS:
             raise PaymeError(-31008, "Время ожидания оплаты истекло", "Toʻlov vaqti tugadi", "Transaction expired")
@@ -333,7 +333,7 @@ async def payme_dispatch(session: AsyncSession, method: str, params: dict) -> di
         if payment.state in (CREATED, PERFORMED):
             was_paid = payment.state == PERFORMED
             reason = params.get("reason")
-            _cancel(payment, int(reason) if isinstance(reason, (int, float)) else None)
+            _cancel(payment, int(reason) if isinstance(reason, int | float) else None)
             agency = await _apply_refund(session, payment) if was_paid else None
             await session.commit()
             if was_paid:
@@ -345,7 +345,7 @@ async def payme_dispatch(session: AsyncSession, method: str, params: dict) -> di
 
     if method == "GetStatement":
         start, end = params.get("from"), params.get("to")
-        if not isinstance(start, (int, float)) or not isinstance(end, (int, float)):
+        if not isinstance(start, int | float) or not isinstance(end, int | float):
             raise PaymeError(-32600, "Неверный период", en="Invalid period")
         rows = await session.scalars(select(Payment).where(
             Payment.provider == "payme", Payment.ext_time >= int(start), Payment.ext_time <= int(end)
