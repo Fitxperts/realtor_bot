@@ -121,13 +121,14 @@ async def create_agency(session: AsyncSession, data: dict, owner_id: int) -> Age
 async def start(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer("🌐 Tilni tanlang / Выберите язык:", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-        _btn("🇺🇿 O‘zbekcha", "pl:lang:uz"), _btn("🇷🇺 Русский", "pl:lang:ru"),
+        _btn("🇺🇿 O‘zbekcha", "pl:lang:uz"), _btn("🇺🇿 Ўзбекча", "pl:lang:uz_cyrl"), _btn("🇷🇺 Русский", "pl:lang:ru"),
     ]]))
 
 
 @router.callback_query(F.data.startswith("pl:lang:"))
 async def choose_lang(callback: CallbackQuery, state: FSMContext) -> None:
     lang = callback.data.split(":")[2]
+    lang = lang if lang in ("uz", "uz_cyrl", "ru") else "ru"
     await state.update_data(lang=lang)
     await callback.answer()
     await callback.message.answer(t("welcome", lang), reply_markup=InlineKeyboardMarkup(inline_keyboard=[[

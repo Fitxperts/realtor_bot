@@ -24,8 +24,8 @@ def test_t_fallback_and_format():
 
 
 def test_menu_texts_are_unique_per_language():
-    # 6 кнопок меню × 3 языка = 18 уникальных подписей (для F.text.in_)
-    assert len(i18n.all_menu_texts()) == 18
+    # 6 кнопок меню × 4 языка (uz, uz_cyrl, ru, en) — все подписи разные (для F.text.in_)
+    assert len(i18n.LANGUAGES) == 4 and len(i18n.all_menu_texts()) == 6 * 4
 
 
 def test_normalize():

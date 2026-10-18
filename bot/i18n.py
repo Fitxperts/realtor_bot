@@ -1,4 +1,6 @@
-"""Мультиязычность РиелторБота: узбекский, русский, английский.
+"""Мультиязычность РиелторБота: узбекский (латиница и кириллица), русский, английский.
+
+Узбекская кириллица генерируется из латиницы (scripts/gen_uz_cyrl.py → bot/i18n_uz_cyrl.py).
 
 - ``LANGUAGES`` — поддерживаемые языки и их подписи для выбора;
 - ``t(key, lang, **kwargs)`` — перевод сообщения с подстановкой параметров;
@@ -12,9 +14,12 @@
 """
 from __future__ import annotations
 
+import hashlib
+
 # Порядок = порядок кнопок выбора языка
 LANGUAGES: dict[str, str] = {
     "uz": "🇺🇿 O‘zbekcha",
+    "uz_cyrl": "🇺🇿 Ўзбекча",
     "ru": "🇷🇺 Русский",
     "en": "🇬🇧 English",
 }
@@ -823,6 +828,37 @@ MESSAGES: dict[str, dict[str, str]] = {
     "mc_object": {"uz": "Obyekt", "ru": "Объект", "en": "Listing"},
     "mc_status": {"uz": "Status", "ru": "Статус", "en": "Status"},
 }
+
+
+def source_hash(latin: str) -> str:
+    """Хеш латинского исходника записи кириллицы (тот же — в scripts/gen_uz_cyrl.py)."""
+    return hashlib.sha1(latin.encode()).hexdigest()[:10]
+
+
+def source_ok(entry: tuple[str, str], latin: str) -> bool:
+    return entry[0] == source_hash(latin)
+
+
+def _merge_cyrillic() -> None:
+    """Подмешать узбекскую кириллицу (сгенерированную) как язык «uz_cyrl».
+
+    Запись берётся, только если латинский исходник не менялся после генерации
+    (хеш совпадает); иначе — латиница, пока не перезапустят генератор.
+    """
+    try:
+        from bot.i18n_uz_cyrl import BUTTONS as CYRL_BUTTONS
+        from bot.i18n_uz_cyrl import MESSAGES as CYRL_MESSAGES
+    except ImportError:  # файл ещё не сгенерирован — кириллица = латиница
+        CYRL_BUTTONS = CYRL_MESSAGES = {}
+
+    for table, cyrl in ((BUTTONS, CYRL_BUTTONS), (MESSAGES, CYRL_MESSAGES)):
+        for key, variants in table.items():
+            if "uz" in variants:
+                entry = cyrl.get(key)
+                variants["uz_cyrl"] = entry[1] if entry and source_ok(entry, variants["uz"]) else variants["uz"]
+
+
+_merge_cyrillic()
 
 
 def t(key: str, lang: str | None, **kwargs) -> str:

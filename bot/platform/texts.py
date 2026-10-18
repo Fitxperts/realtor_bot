@@ -108,6 +108,22 @@ CITIES = ("Фергана", "Ташкент", "Самарканд", "Наман�
           "Маргилан")
 
 
+def _merge_cyrillic() -> None:
+    """Узбекская кириллица (сгенерирована из латиницы — scripts/gen_uz_cyrl.py)."""
+    from bot.i18n import source_ok
+
+    try:
+        from bot.i18n_uz_cyrl import PLATFORM
+    except ImportError:
+        PLATFORM = {}
+    for key, variants in TEXTS.items():
+        entry = PLATFORM.get(key)
+        variants["uz_cyrl"] = entry[1] if entry and source_ok(entry, variants["uz"]) else variants["uz"]
+
+
+_merge_cyrillic()
+
+
 def t(key: str, lang: str, **kwargs) -> str:
     variants = TEXTS[key]
     text = variants.get(lang) or variants["ru"]
