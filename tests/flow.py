@@ -25,7 +25,7 @@ from aiogram.methods import (
     SendPhoto,
     TelegramMethod,
 )
-from aiogram.types import CallbackQuery, Chat, Contact, Message, Update, User
+from aiogram.types import CallbackQuery, Chat, Contact, Message, Update, User, Voice
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -161,11 +161,12 @@ class Harness:
         await self.dp.feed_update(bot or self.bot, Update(update_id=next(self._update_ids), **kwargs))
 
     async def message(self, uid: int, text: str | None = None, *, contact: str | None = None,
-                      bot: Bot | None = None) -> None:
+                      voice: str | None = None, bot: Bot | None = None) -> None:
         msg = Message(
             message_id=next(self._msg_ids), date=dt.datetime.now(), chat=Chat(id=uid, type="private"),
             from_user=self.user(uid), text=text,
             contact=Contact(phone_number=contact, first_name="U", user_id=uid) if contact else None,
+            voice=Voice(file_id=voice, file_unique_id=voice, duration=3) if voice else None,
         )
         await self._feed(bot, message=msg)
 

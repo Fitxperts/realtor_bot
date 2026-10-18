@@ -19,7 +19,7 @@ import re
 
 from bot.agency_config import cfg
 from bot.config import PREMIUM_EMOJI, get_settings
-from bot.services import offline_parser
+from bot.services import ai_quota, offline_parser
 from bot.services.llm_providers import LLMRouter, build_chain
 
 logger = logging.getLogger(__name__)
@@ -195,9 +195,10 @@ class AIService:
         (своё или готовое объявление партнёра), бот сам извлекает поля и
         оформляет. При недоступности ИИ — офлайн-разбор регулярками.
         """
-        if self.enabled:
+        if self.enabled and await ai_quota.allow():   # лимит тарифа исчерпан → офлайн
             data = await self._listing_with_ai(text)
             if data:
+                await ai_quota.spend()
                 return data
         return self._listing_offline(text)
 

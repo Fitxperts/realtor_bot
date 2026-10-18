@@ -32,7 +32,7 @@ from bot.database.models import (
 from bot.handlers import demo
 from bot.keyboards import owner_kb
 from bot.keyboards.admin_kb import moderation_kb
-from bot.services import analytics, duplicate_checker
+from bot.services import ai_quota, analytics, duplicate_checker
 from bot.services.ai_service import get_ai_service
 from bot.services.notify import notify_admins
 from bot.services.transcribe import get_transcribe_service
@@ -142,6 +142,9 @@ async def _download(bot: Bot, file_id: str) -> bytes:
 async def _handle_screenshot(message: Message, state: FSMContext, lang: str) -> None:
     """Скрин объявления → Vision извлекает текст → обычный разбор. Картинку-скрин
     не оставляем как фото объекта."""
+    if not await ai_quota.allow():                  # лимит ИИ по тарифу исчерпан — фото остаётся фото объекта
+        await message.answer(i18n.t("owner_ai_limit", lang))
+        return
     async with _media_lock:
         data = await state.get_data()
         screenshot_id = message.photo[-1].file_id
@@ -173,6 +176,9 @@ async def listing_voice(message: Message, state: FSMContext, lang: str) -> None:
         return
     if not get_transcribe_service().is_enabled():
         await message.answer(i18n.t("owner_send_text", lang))
+        return
+    if not await ai_quota.allow():                  # лимит ИИ по тарифу исчерпан
+        await message.answer(i18n.t("owner_ai_limit", lang))
         return
     await state.update_data(_parsed=True)
     await message.answer(i18n.t("owner_listening", lang))

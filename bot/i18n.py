@@ -613,6 +613,11 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ru": "🎧 Слушаю голосовое…",
         "en": "🎧 Listening to your voice message…",
     },
+    "owner_ai_limit": {
+        "uz": "Bu oy uchun ovoz va rasmlarni tanish limiti tugadi. Iltimos, eʼlonni <b>matn</b> bilan yuboring.",
+        "ru": "Лимит распознавания голоса и картинок на этот месяц исчерпан. Пришлите объявление <b>текстом</b>.",
+        "en": "This month’s voice/image recognition limit is used up. Please send the listing as <b>text</b>.",
+    },
     "owner_voice_failed": {
         "uz": "Ovozli xabarni tushuna olmadim. Iltimos, matn bilan yuboring.",
         "ru": "Не смог разобрать голосовое. Пришлите текстом.",
