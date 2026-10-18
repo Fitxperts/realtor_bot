@@ -172,6 +172,9 @@ async def _show_property(target: Message, prop: Property, kb, lang: str) -> None
 # --- действия с объектом ---
 @router.callback_query(F.data.startswith(f"{P}:approve:"))
 async def approve(callback: CallbackQuery, session: AsyncSession, bot: Bot, lang: str) -> None:
+    if cfg().readonly:
+        await callback.answer(i18n.t("readonly_admin", lang), show_alert=True)
+        return
     property_id = callback.data.split(":")[2]
     try:
         prop = await publisher.publish_property(bot, session, property_id)
@@ -203,6 +206,9 @@ async def sold(callback: CallbackQuery, session: AsyncSession, bot: Bot, lang: s
 
 @router.callback_query(F.data.startswith(f"{P}:bump:"))
 async def bump(callback: CallbackQuery, session: AsyncSession, bot: Bot, lang: str) -> None:
+    if cfg().readonly:
+        await callback.answer(i18n.t("readonly_admin", lang), show_alert=True)
+        return
     await publisher.bump_property(bot, session, callback.data.split(":")[2])
     await callback.answer(i18n.t("adm_t_bumped", lang), show_alert=True)
 

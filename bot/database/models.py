@@ -61,6 +61,11 @@ class Agency(Base):
     admin_ids: Mapped[str | None] = mapped_column(String(255))          # «123,456»
     owner_telegram_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
     language: Mapped[str] = mapped_column(String(2), default="uz")
+    # Подписка (bot/services/billing.py): пробный период → оплачено до → льгота → только чтение
+    plan: Mapped[str] = mapped_column(String(16), default="start")       # start | pro | network
+    trial_until: Mapped[dt.datetime | None] = mapped_column(DateTime())
+    paid_until: Mapped[dt.datetime | None] = mapped_column(DateTime())
+    billing_notice: Mapped[str | None] = mapped_column(String(32))        # последнее напоминание (без повторов)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(), default=timeutils.now)
 
 

@@ -19,12 +19,13 @@ import logging
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from bot.agency_config import cfg
 from bot.bots import for_each_agency
 from bot.config import BUMP_INTERVAL_DAYS, TIMEZONE, get_settings
 from bot.database import crud
 from bot.database.models import Client
 from bot.database.session import get_sessionmaker
-from bot.services import publisher
+from bot.services import billing, publisher
 from bot.services.ai_health import check_ai_outage
 from bot.services.analytics import weekly_report
 from bot.services.backups import ship_latest_backup
@@ -39,6 +40,8 @@ logger = logging.getLogger(__name__)
 # Задача 1. Автоподнятие
 # ---------------------------------------------------------------------------
 async def auto_bump(bot: Bot) -> None:
+    if cfg().readonly:  # подписка не оплачена — канал не трогаем
+        return
     threshold = timeutils.now() - dt.timedelta(days=BUMP_INTERVAL_DAYS)
     async with get_sessionmaker()() as session:
         due = await crud.properties_due_for_bump(session, threshold)
@@ -142,6 +145,10 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler.add_job(
         for_each_agency, trigger="cron", day_of_week="mon", hour=9, minute=0, args=per_agency(weekly_report),
         id="weekly_report", replace_existing=True,
+    )
+    scheduler.add_job(
+        for_each_agency, trigger="cron", hour=10, minute=30, args=per_agency(billing.reminders_job),
+        id="billing_reminders", replace_existing=True,
     )
     # Платформа: сервис backup делает дамп после 03:00 — к 04:10 он точно готов
     scheduler.add_job(

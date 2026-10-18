@@ -11,6 +11,7 @@ cfg().admin_ids; платформе (сбой ИИ, бэкапы, ошибки �
 """
 from __future__ import annotations
 
+import datetime as dt
 import logging
 from dataclasses import dataclass, field, replace
 
@@ -36,6 +37,23 @@ class AgencyConfig:
     language: str = "uz"
     bot_username: str = ""
     active: bool = True
+    plan: str = "start"
+    trial_until: dt.datetime | None = None
+    paid_until: dt.datetime | None = None
+    created_at: dt.datetime | None = None
+
+    def billing_state(self):
+        """Состояние подписки сейчас (bot/services/billing.py)."""
+        from bot.services.billing import compute_state
+
+        return compute_state(self.id, self.trial_until, self.paid_until, self.created_at)[0]
+
+    @property
+    def readonly(self) -> bool:
+        """Подписка не оплачена: приём и публикация объявлений остановлены."""
+        from bot.services.billing import State
+
+        return self.billing_state() == State.readonly
 
     def is_admin(self, telegram_id: int | None) -> bool:
         return telegram_id is not None and telegram_id in self.admin_ids
@@ -75,6 +93,10 @@ def from_row(row) -> AgencyConfig:
         language=row.language or "uz",
         bot_username=username,
         active=row.status != "disabled",
+        plan=row.plan or "start",
+        trial_until=row.trial_until,
+        paid_until=row.paid_until,
+        created_at=row.created_at,
     )
 
 

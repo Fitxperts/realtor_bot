@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import re
 import secrets
@@ -24,8 +25,10 @@ from bot.agency_config import from_row, register
 from bot.config import get_settings
 from bot.database.models import Agency
 from bot.platform.texts import CITIES, t
+from bot.services.billing import TRIAL_DAYS
 from bot.states.platform_states import Onboarding
 from bot.tenancy import DEFAULT_AGENCY_ID
+from bot.utils import timeutils
 
 logger = logging.getLogger(__name__)
 router = Router(name="platform_onboarding")
@@ -96,6 +99,7 @@ async def create_agency(session: AsyncSession, data: dict, owner_id: int) -> Age
         webhook_secret=secret, channel_id=channel, channel_url=f"https://t.me/{channel[1:]}",
         contacts=data.get("contacts") or None, watermark=data["name"][:64], admin_ids=str(owner_id),
         owner_telegram_id=owner_id, language=data.get("lang", "uz"),
+        plan="start", trial_until=timeutils.now() + dt.timedelta(days=TRIAL_DAYS),
     )
     session.add(row)
     await session.commit()

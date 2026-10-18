@@ -66,6 +66,9 @@ _MEDIA_STATES = (
 # ---------------------------------------------------------------------------
 async def begin_property_form(message: Message, state: FSMContext, lang: str) -> None:
     await state.clear()
+    if cfg().readonly:  # подписка агентства не оплачена — объявления не принимаем
+        await message.answer(i18n.t("readonly_owner", lang))
+        return
     await state.set_state(OwnerForm.raw)
     await state.update_data(lang=lang)
     await message.answer(i18n.t("owner_intro", lang))
@@ -373,6 +376,11 @@ async def _save_property(
 ) -> None:
     data = await state.get_data()
     settings = get_settings()
+    if cfg().readonly:  # подписка кончилась, пока человек заполнял форму
+        await state.clear()
+        await callback.message.answer(i18n.t("readonly_owner", lang))
+        await callback.answer()
+        return
     if settings.demo_mode and await _demo_limit_reached(session, callback.from_user.id):
         await _demo_limit_reply(callback, state, lang)  # страховка для пути «всё равно добавить» (дубль)
         return

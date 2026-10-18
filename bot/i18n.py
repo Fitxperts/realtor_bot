@@ -129,6 +129,17 @@ def all_menu_texts() -> set[str]:
 # Сообщения: key -> {lang: text}
 # ---------------------------------------------------------------------------
 MESSAGES: dict[str, dict[str, str]] = {
+    # --- Подписка агентства ---
+    "readonly_owner": {
+        "uz": "Eʼlon qabul qilish vaqtincha toʻxtatilgan. Eʼlonlarni koʻrish va ariza qoldirish ishlayapti.",
+        "ru": "Приём объявлений временно приостановлен. Смотреть объявления и оставлять заявки можно.",
+        "en": "Listing submission is paused for now. Browsing and requests still work.",
+    },
+    "readonly_admin": {
+        "uz": "⛔ Obuna toʻlanmagan — eʼlon chiqarish toʻxtatilgan. Toʻlov: platforma boti → /pay",
+        "ru": "⛔ Подписка не оплачена — публикация остановлена. Оплата: бот платформы → /pay",
+        "en": "⛔ Subscription unpaid — publishing is paused. Pay: platform bot → /pay",
+    },
     # --- Проверка актуальности ---
     "fresh_ask": {
         "uz": "🕑 <b>{id} eʼloni hali dolzarbmi?</b>\nU katalogda 2 haftadan beri turibdi. 3 kun ichida javob "
