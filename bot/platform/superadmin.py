@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.agency_config import from_row, register
 from bot.config import get_settings
 from bot.database.models import Agency, Client, Event, Property, PropertyStatus
+from bot.services import billing, payments
 from bot.tenancy import ALL_AGENCIES
 from bot.utils import timeutils
 
@@ -69,7 +70,34 @@ def _card(row: Agency) -> str:
             f"Статус: {'⏸ отключено' if row.status == 'disabled' else '✅ работает'}\n"
             f"🤖 @{row.bot_username or '—'} · 📢 {escape(row.channel_id or '—')}\n"
             f"👤 владелец <code>{row.owner_telegram_id or '—'}</code> · админы {escape(row.admin_ids or '—')}\n"
-            f"📅 с {row.created_at:%d.%m.%Y}")
+            f"📅 с {row.created_at:%d.%m.%Y}\n"
+            f"💳 {_billing_line(row)}")
+
+
+def _billing_line(row: Agency) -> str:
+    state, until = billing.compute_state(row.id, row.trial_until, row.paid_until, row.created_at)
+    when = f" до {until:%d.%m.%Y}" if until else ""
+    names = {"trial": "пробный период", "active": "оплачено", "grace": "льгота", "readonly": "только чтение"}
+    plan = billing.PLANS.get(row.plan, {}).get("name", row.plan)
+    return f"«{plan}» · {names[state.value]}{when}"
+
+
+@router.message(Command("paid"))
+async def mark_paid(message: Message, command: CommandObject, session: AsyncSession) -> None:
+    """/paid N месяцев [тариф] — оплата наличными или переводом."""
+    args = (command.args or "").split()
+    plan = args[2].lower() if len(args) > 2 else None
+    usage = ("Использование: /paid &lt;номер агентства&gt; &lt;месяцев&gt; [start|pro|network]\n"
+             "Например: /paid 5 3 pro")
+    if len(args) < 2 or not args[0].isdigit() or not args[1].isdigit() or (plan and plan not in billing.PLANS):
+        await message.answer(usage)
+        return
+    row = await session.get(Agency, int(args[0]))
+    if row is None or row.id == 1 or not 1 <= int(args[1]) <= 24:
+        await message.answer(usage)
+        return
+    agency = await payments.record_manual(session, row.id, plan or row.plan, int(args[1]), message.from_user.id)
+    await message.answer(_card(agency), reply_markup=_toggle_kb(agency))
 
 
 @router.message(Command("agency"))

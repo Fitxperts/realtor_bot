@@ -58,10 +58,11 @@ def upgrade() -> None:
 
     # Агентство №1 — то, что работало до SaaS (настройки пока из .env)
     if bind.execute(sa.text("SELECT 1 FROM agencies WHERE id = 1")).first() is None:
-        bind.execute(sa.text(
-            "INSERT INTO agencies (id, name, status, language, created_at) "
-            "VALUES (1, 'Агентство №1', 'active', 'uz', CURRENT_TIMESTAMP)"
-        ))
+        # на свежей БД 0001 уже создала колонки следующих ревизий (plan NOT NULL из 0007)
+        plan = ("plan", "'start'") if _has_column("agencies", "plan") else None
+        columns = "id, name, status, language, created_at" + (f", {plan[0]}" if plan else "")
+        values = "1, 'Агентство №1', 'active', 'uz', CURRENT_TIMESTAMP" + (f", {plan[1]}" if plan else "")
+        bind.execute(sa.text(f"INSERT INTO agencies ({columns}) VALUES ({values})"))
     if bind.dialect.name == "postgresql":  # явный id=1 не двигает счётчик — иначе следующее получит 1
         bind.execute(sa.text(
             "SELECT setval(pg_get_serial_sequence('agencies', 'id'), (SELECT MAX(id) FROM agencies))"

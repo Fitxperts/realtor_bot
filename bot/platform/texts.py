@@ -63,6 +63,27 @@ TEXTS: dict[str, dict[str, str]] = {
     "my_line": {"uz": "🏢 {name} · @{username} · {status}", "ru": "🏢 {name} · @{username} · {status}"},
     "status_active": {"uz": "ishlayapti", "ru": "работает"},
     "status_disabled": {"uz": "oʻchirilgan", "ru": "отключено"},
+    # /pay — оплата подписки
+    "pay_none": {"uz": "Toʻlov uchun agentlik yoʻq. Avval ulang: /start",
+                 "ru": "Нет агентства для оплаты. Сначала подключите: /start"},
+    "pay_choose_agency": {"uz": "Qaysi agentlik uchun toʻlaysiz?", "ru": "За какое агентство платите?"},
+    "pay_state_trial": {"uz": "🏢 {name}\nSinov davri {until} gacha.", "ru": "🏢 {name}\nПробный период до {until}."},
+    "pay_state_active": {"uz": "🏢 {name}\nTarif «{plan}», {until} gacha toʻlangan.",
+                         "ru": "🏢 {name}\nТариф «{plan}», оплачено до {until}."},
+    "pay_state_grace": {"uz": "🏢 {name}\n⚠️ Obuna tugadi, {until} gacha ishlaydi.",
+                        "ru": "🏢 {name}\n⚠️ Подписка закончилась, бот работает до {until}."},
+    "pay_state_readonly": {"uz": "🏢 {name}\n⛔ Obuna toʻlanmagan: eʼlon qabul qilish toʻxtatilgan.",
+                           "ru": "🏢 {name}\n⛔ Подписка не оплачена: приём объявлений остановлен."},
+    "pay_choose_plan": {"uz": "Tarifni tanlang (narx — oyiga):", "ru": "Выберите тариф (цена за месяц):"},
+    "pay_plan_btn": {"uz": "{name} — {price}", "ru": "{name} — {price}"},
+    "pay_choose_months": {"uz": "«{plan}» — necha oyga?", "ru": "«{plan}» — на сколько месяцев?"},
+    "pay_months_btn": {"uz": "{n} oy — {total}", "ru": "{n} мес — {total}"},
+    "pay_invoice": {"uz": "🧾 Hisob №{id}\n{name}: «{plan}», {months} oy\nJami: <b>{total}</b>\n\n"
+                          "Toʻlovdan soʻng obuna darhol uzayadi — bot xabar beradi.",
+                    "ru": "🧾 Счёт №{id}\n{name}: «{plan}», {months} мес\nИтого: <b>{total}</b>\n\n"
+                          "После оплаты подписка продлится сразу — бот пришлёт подтверждение."},
+    "pay_offline": {"uz": "Onlayn toʻlov hali ulanmagan — siz bilan bogʻlanamiz.",
+                    "ru": "Онлайн-оплата пока не подключена — мы свяжемся с вами для оплаты."},
 }
 
 CITIES = ("Фергана", "Ташкент", "Самарканд", "Наманган", "Андижан", "Бухара", "Карши", "Нукус", "Коканд",

@@ -69,6 +69,34 @@ class Agency(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(), default=timeutils.now)
 
 
+class Payment(Base):
+    """Счёт на подписку агентства и его транзакция в Payme / Click (bot/services/payments.py).
+
+    Не AgencyScoped: платёжные системы приходят без контекста агентства, агентство
+    берётся из самого счёта. Один счёт — одна оплата; новая попытка — новый /pay.
+    """
+
+    __tablename__ = "payments"
+
+    id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True,
+                                    autoincrement=True)                  # номер счёта (order_id / merchant_trans_id)
+    agency_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("agencies.id"), index=True)
+    plan: Mapped[str] = mapped_column(String(16))
+    months: Mapped[int] = mapped_column(Integer)
+    amount: Mapped[int] = mapped_column(BigInteger)                      # сумы
+    payer_id: Mapped[int | None] = mapped_column(BigInteger)             # кто выставил счёт (Telegram)
+    provider: Mapped[str | None] = mapped_column(String(8))              # payme | click
+    ext_id: Mapped[str | None] = mapped_column(String(64), index=True)   # id транзакции у провайдера
+    ext_time: Mapped[int | None] = mapped_column(BigInteger)             # время транзакции у Payme, мс
+    # 0 — не начат, 1 — создан, 2 — оплачен, -1 — отменён, -2 — отменён после оплаты (как у Payme)
+    state: Mapped[int] = mapped_column(Integer, default=0)
+    reason: Mapped[int | None] = mapped_column(Integer)                  # причина отмены (Payme)
+    create_time: Mapped[int | None] = mapped_column(BigInteger)          # мс, для ответов Payme
+    perform_time: Mapped[int | None] = mapped_column(BigInteger)
+    cancel_time: Mapped[int | None] = mapped_column(BigInteger)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(), default=timeutils.now)
+
+
 # ---------------------------------------------------------------------------
 # Перечисления
 # ---------------------------------------------------------------------------

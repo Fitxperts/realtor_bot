@@ -37,3 +37,35 @@ jobs:
           ADMIN_TELEGRAM_ID: "1"
           CHANNEL_ID: "@test"
         run: pytest -q
+
+  migrations:
+    # Миграции на настоящем Postgres: свежая установка, сверка с моделями, откат и повтор
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: realtor
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      BOT_TOKEN: "123456789:TESTtokenABCDEFGHIJKLMNOPQRSTUVWXYZ12"
+      DATABASE_URL: "postgresql+asyncpg://postgres:postgres@localhost:5432/realtor"
+      ADMIN_TELEGRAM_ID: "1"
+      CHANNEL_ID: "@test"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Upgrade, check, downgrade, upgrade
+        run: |
+          alembic upgrade head
+          alembic check
+          alembic downgrade -1
+          alembic upgrade head
+          alembic check
