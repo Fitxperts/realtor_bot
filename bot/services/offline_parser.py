@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 
+from bot.services import geo
 from bot.utils.money import parse_money
 
 _AP = "['ʻ’‘`ʼ]"  # апостроф в узбекской латинице пишут по-разному
@@ -52,19 +53,19 @@ _MONEY = re.compile(
 )
 _USD_WORD = re.compile(r"\$|у\.?\s?е|y\.\s?e|долл|dollar|бакс|usd")
 
-# --- районы Ферганы: любое написание → каноническое (как в выборе массива) ---
-DISTRICT_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("ЭкоСити Аэропорт", ("экосити", "эко сити", "ekositi", "eko siti", "ecocity", "eco city")),
-    ("Миндонобод", ("миндонобод", "миндонабад", "mindonobod", "mindonabad")),
-    ("Киргули", ("киргули", "кирғули", "қирғули", "қиргули", "qirguli", "kirguli")),
-    ("Фрунзе", ("фрунзе", "frunze")),
-    ("Ахунбабаев", ("ахунбабаев", "ахунбобоев", "axunboboyev", "axunbabaev", "akhunbabaev")),
-    ("Калининский", ("калинин", "kalinin")),
-    ("Текстиль", ("текстил", "tekstil")),
-    ("Военный городок", ("военн", "voenniy", "voyenniy", "harbiy shaharcha", "ҳарбий шаҳарча", "харбий шахарча")),
-    ("Маталка", ("маталк", "matalk")),
-    ("Центр", ("центр", "markaz", "марказ")),
-)
+# --- районы: справочник текущего агентства (bot/services/geo.py); Фергана — по умолчанию ---
+DISTRICT_ALIASES = geo.FERGANA
+
+
+def current_districts() -> tuple[geo.District, ...]:
+    """Районы города текущего агентства (офлайн-разбор вне бота — Фергана)."""
+    try:
+        from bot.agency_config import cfg
+
+        return cfg().districts
+    except Exception:  # noqa: BLE001 - нет контекста агентства (скрипты, оценка)
+        return DISTRICT_ALIASES
+
 
 # Слова, которые не бывают районом (для запасной эвристики «первое значимое слово»)
 _STOPWORDS = (
@@ -138,10 +139,11 @@ def _price(low: str) -> tuple[float, str] | None:
     return best_cur or best_mult or best_plain
 
 
-def known_district(text: str | None) -> str | None:
+def known_district(text: str | None, districts: tuple[geo.District, ...] | None = None) -> str | None:
     """Известный массив в тексте (любое написание) → каноническое имя; иначе None."""
     norm = _norm(text or "")
-    hits = [(norm.find(alias), name) for name, aliases in DISTRICT_ALIASES for alias in aliases if alias in norm]
+    table = current_districts() if districts is None else districts
+    hits = [(norm.find(alias), name) for name, aliases in table for alias in aliases if alias in norm]
     return min(hits)[1] if hits else None  # упомянутый первым
 
 

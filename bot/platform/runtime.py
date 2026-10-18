@@ -6,7 +6,7 @@ from aiogram.fsm.storage.base import BaseStorage
 
 from bot import bots
 from bot.middlewares.db import DbSessionMiddleware
-from bot.platform import onboarding, pay, superadmin
+from bot.platform import districts, onboarding, pay, superadmin
 
 PLATFORM_PATH_SUFFIX = "/platform"
 
@@ -17,5 +17,6 @@ def build_platform(token: str, storage: BaseStorage) -> tuple[Bot, Dispatcher]:
     dp.update.middleware(DbSessionMiddleware())
     dp.include_router(superadmin.router)   # команды владельца — раньше онбординга
     dp.include_router(pay.router)
+    dp.include_router(districts.router)
     dp.include_router(onboarding.router)
     return bot, dp

@@ -65,6 +65,7 @@ async def _show_plans(message: Message, row: Agency, lang: str) -> None:
 
 @router.message(Command("pay"))
 async def pay(message: Message, state: FSMContext, session: AsyncSession) -> None:
+    await state.set_state(None)                    # прервать начатый ввод (например, списка районов)
     lang = await _lang(state)
     rows = await payable_agencies(session, message.from_user.id)
     if not rows:

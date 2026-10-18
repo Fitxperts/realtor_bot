@@ -9,3 +9,7 @@ class Onboarding(StatesGroup):
     channel = State()
     contacts = State()
     confirm = State()
+
+
+class DistrictsForm(StatesGroup):
+    text = State()

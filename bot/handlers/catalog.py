@@ -29,11 +29,11 @@ from bot.handlers.client import begin_client_form
 from bot.handlers.lead import begin_lead
 from bot.services import analytics
 from bot.services.catalog_filter import (
-    DISTRICTS,
     PRICE_BUCKETS,
     ROOMS,
     CatalogFilter,
     district_counts,
+    districts,
     filtered,
 )
 from bot.utils.formatters import format_property_card
@@ -111,7 +111,7 @@ async def _panel(session: AsyncSession, f: CatalogFilter, lang: str) -> tuple[st
     price = (i18n.t("f_price_upto", lang, amount=_money(int(f.max_usd))) if f.max_usd
              else i18n.t("f_any_price", lang))
     text = i18n.t("f_panel", lang, deal=deal, count=count, rooms=rooms, price=price,
-                  district=DISTRICTS[f.district] if f.district is not None else i18n.t("f_any_district", lang))
+                  district=districts()[f.district] if f.district is not None else i18n.t("f_any_district", lang))
     enc = f.encode()
     # смена сделки сбрасывает цену: «до $300» у аренды и у продажи — разные шкалы
     deals = [_btn(("• " if f.deal == d else "") + i18n.btn(key, lang),

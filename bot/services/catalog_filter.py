@@ -12,12 +12,18 @@ from dataclasses import dataclass, replace
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.agency_config import cfg
 from bot.config import get_settings
 from bot.database.models import Property, PropertyStatus, PropertyType
-from bot.services.offline_parser import DISTRICT_ALIASES, known_district
+from bot.services.offline_parser import known_district
 from bot.utils.money import to_usd
 
-DISTRICTS = [name for name, _ in DISTRICT_ALIASES]
+
+def districts() -> list[str]:
+    """Районы города текущего агентства — в порядке справочника (индекс идёт в данные кнопки)."""
+    return [name for name, _ in cfg().districts]
+
+
 ROOMS = (1, 2, 3, 4)                       # 4 = «4 и больше»
 PRICE_BUCKETS = {                          # потолок цены в долларах
     "rent": (200, 300, 400, 500, 700),
@@ -29,7 +35,7 @@ _TYPE = {"rent": PropertyType.rent, "sale": PropertyType.sale}
 @dataclass(frozen=True)
 class CatalogFilter:
     deal: str = "all"              # rent | sale | all
-    district: int | None = None    # индекс в DISTRICTS
+    district: int | None = None    # индекс в districts()
     rooms: int | None = None       # 1..4 (4 = 4+)
     price: int | None = None       # индекс в PRICE_BUCKETS[deal]
 
@@ -48,7 +54,7 @@ class CatalogFilter:
 
         deal = parts[0] if parts[0] in ("rent", "sale", "all") else "all"
         rooms = num(parts[2], 5)
-        f = cls(deal, num(parts[1], len(DISTRICTS)), rooms if rooms else None,
+        f = cls(deal, num(parts[1], len(districts())), rooms if rooms else None,
                 num(parts[3], len(PRICE_BUCKETS.get(deal, ()))))
         return f
 
@@ -69,7 +75,7 @@ class CatalogFilter:
         return self.district is None and self.rooms is None and self.price is None
 
     def matches(self, prop: Property, rate: float) -> bool:
-        if self.district is not None and known_district(prop.district) != DISTRICTS[self.district]:
+        if self.district is not None and known_district(prop.district) != districts()[self.district]:
             return False
         if self.rooms is not None:
             if prop.rooms is None or (prop.rooms != self.rooms if self.rooms < 4 else prop.rooms < 4):
@@ -104,4 +110,4 @@ async def district_counts(session: AsyncSession, f: CatalogFilter) -> list[tuple
         name = known_district(prop.district)
         if name and base.matches(prop, rate):
             counts[name] = counts.get(name, 0) + 1
-    return [(i, name, counts[name]) for i, name in enumerate(DISTRICTS) if counts.get(name)]
+    return [(i, name, counts[name]) for i, name in enumerate(districts()) if counts.get(name)]

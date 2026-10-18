@@ -82,6 +82,24 @@ TEXTS: dict[str, dict[str, str]] = {
                           "Toʻlovdan soʻng obuna darhol uzayadi — bot xabar beradi.",
                     "ru": "🧾 Счёт №{id}\n{name}: «{plan}», {months} мес\nИтого: <b>{total}</b>\n\n"
                           "После оплаты подписка продлится сразу — бот пришлёт подтверждение."},
+    # /districts — свои районы
+    "dist_current": {"uz": "🏢 {name} — tumanlar/massivlar ({n}):\n<code>{list}</code>",
+                     "ru": "🏢 {name} — районы/массивы ({n}):\n<code>{list}</code>"},
+    "dist_empty": {"uz": "🏢 {name}: «{city}» uchun tumanlar roʻyxati hali yoʻq — katalog filtri va mijoz "
+                         "arizasida tuman tanlab boʻlmaydi.",
+                   "ru": "🏢 {name}: для города «{city}» списка районов пока нет — в фильтре каталога и в заявке "
+                         "клиента район не выбрать."},
+    "dist_howto": {"uz": "Yangi roʻyxatni yuboring: har qatorda bitta massiv (koʻpi bilan {max}). Yozilish "
+                         "variantlari — ikki nuqtadan keyin:\n<code>Chilonzor: чиланзар, chilanzar\nSergeli</code>",
+                   "ru": "Пришлите новый список: по строке на массив (до {max}). Варианты написания — через "
+                         "двоеточие:\n<code>Чиланзар: chilonzor, чилонзор\nСергели</code>"},
+    "dist_hint": {"uz": "📍 «{city}» tumanlari: katalog filtri va mijoz arizasi uchun massivlar roʻyxatini "
+                        "yuboring — /districts",
+                  "ru": "📍 Районы города «{city}»: пришлите список массивов — для фильтра каталога и заявок "
+                        "клиентов: /districts"},
+    "dist_reset_btn": {"uz": "↩️ «{city}» spravochnigi", "ru": "↩️ Справочник «{city}»"},
+    "dist_saved": {"uz": "✅ Saqlandi — {n} ta massiv, bot darhol ishlatadi:\n<code>{list}</code>",
+                   "ru": "✅ Сохранено — {n} массивов, бот агентства уже использует:\n<code>{list}</code>"},
     "pay_offline": {"uz": "Onlayn toʻlov hali ulanmagan — siz bilan bogʻlanamiz.",
                     "ru": "Онлайн-оплата пока не подключена — мы свяжемся с вами для оплаты."},
 }

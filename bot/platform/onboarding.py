@@ -25,6 +25,7 @@ from bot.agency_config import from_row, register
 from bot.config import get_settings
 from bot.database.models import Agency
 from bot.platform.texts import CITIES, t
+from bot.services import geo
 from bot.services.billing import TRIAL_DAYS
 from bot.states.platform_states import Onboarding
 from bot.tenancy import DEFAULT_AGENCY_ID
@@ -261,7 +262,10 @@ async def launch(callback: CallbackQuery, state: FSMContext, session: AsyncSessi
         await callback.message.answer(t("unavailable", lang))
         return
     await state.clear()
+    await state.update_data(lang=lang)                     # язык нужен дальше: /pay, /districts
     await callback.message.answer(t("done", lang, username=row.bot_username, channel=row.channel_id))
+    if not geo.for_city(row.city):                         # нет встроенного справочника районов
+        await callback.message.answer(t("dist_hint", lang, city=escape(row.city or "—")))
     who = escape(callback.from_user.full_name or "")
     for admin_id in get_settings().admin_ids:
         try:

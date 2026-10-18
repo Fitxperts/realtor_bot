@@ -61,6 +61,7 @@ class Agency(Base):
     admin_ids: Mapped[str | None] = mapped_column(String(255))          # «123,456»
     owner_telegram_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
     language: Mapped[str] = mapped_column(String(2), default="uz")
+    districts: Mapped[str | None] = mapped_column(Text)                 # свои массивы (bot/services/geo.py)
     # Подписка (bot/services/billing.py): пробный период → оплачено до → льгота → только чтение
     plan: Mapped[str] = mapped_column(String(16), default="start")       # start | pro | network
     trial_until: Mapped[dt.datetime | None] = mapped_column(DateTime())

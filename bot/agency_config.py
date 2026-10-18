@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import config as app_config
+from bot.services import geo
 from bot.tenancy import DEFAULT_AGENCY_ID, current_agency_id
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,8 @@ class AgencyConfig:
     trial_until: dt.datetime | None = None
     paid_until: dt.datetime | None = None
     created_at: dt.datetime | None = None
+    city: str = ""
+    districts: tuple = ()          # ((имя, (варианты…)), …) — bot/services/geo.py
 
     def billing_state(self):
         """Состояние подписки сейчас (bot/services/billing.py)."""
@@ -74,6 +77,8 @@ def env_config() -> AgencyConfig:
         contacts=list(app_config.AGENCY_CONTACTS),
         watermark=app_config.WATERMARK_TEXT,
         admin_ids=list(settings.admin_ids),
+        city="Фергана",
+        districts=geo.FERGANA,
     )
 
 
@@ -97,6 +102,8 @@ def from_row(row) -> AgencyConfig:
         trial_until=row.trial_until,
         paid_until=row.paid_until,
         created_at=row.created_at,
+        city=row.city or "",
+        districts=geo.parse(row.districts) if row.districts else geo.for_city(row.city),
     )
 
 

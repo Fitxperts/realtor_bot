@@ -7,11 +7,12 @@ from aiogram.methods import AnswerCallbackQuery, EditMessageReplyMarkup, EditMes
 from bot.config import get_settings
 from bot.database import crud
 from bot.database.models import PropertyKind, PropertyStatus, PropertyType
-from bot.services import demo
-from bot.services.catalog_filter import DISTRICTS, CatalogFilter, district_counts, filtered
+from bot.services import demo, geo
+from bot.services.catalog_filter import CatalogFilter, district_counts, filtered
 from tests.flow import buttons
 
 USER = 830
+DISTRICTS = [name for name, _ in geo.FERGANA]
 KIRGULI = DISTRICTS.index("Киргули")
 
 

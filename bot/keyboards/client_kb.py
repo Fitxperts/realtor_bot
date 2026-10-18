@@ -4,20 +4,9 @@ from __future__ import annotations
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot import i18n
+from bot.agency_config import cfg
 
 PREFIX = "cl"
-
-# Районы Ферганы
-FERGANA_DISTRICTS = [
-    "Центр",
-    "Ёрмозор",
-    "Киргули",
-    "Селмаш",
-    "Водник",
-    "Дамкуль",
-    "Юбилейный",
-    "Ташлак",
-]
 
 # Слоты по времени суток
 TIME_SLOTS = {
@@ -39,12 +28,18 @@ def deal_type_kb(lang: str) -> InlineKeyboardMarkup:
     )
 
 
+def _districts() -> list[str]:
+    """Районы города текущего агентства (справочник — bot/services/geo.py)."""
+    return [name for name, _ in cfg().districts]
+
+
 def districts_kb(lang: str) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
-    for i in range(0, len(FERGANA_DISTRICTS), 2):
+    names = _districts()
+    for i in range(0, len(names), 2):
         row = [
             InlineKeyboardButton(text=name, callback_data=f"{PREFIX}:dist:{idx}")
-            for idx, name in enumerate(FERGANA_DISTRICTS[i : i + 2], start=i)
+            for idx, name in enumerate(names[i : i + 2], start=i)
         ]
         rows.append(row)
     rows.append(
@@ -88,4 +83,5 @@ def get_district(idx: str) -> str | None:
     if idx == "other" or not idx.isdigit():
         return None
     i = int(idx)
-    return FERGANA_DISTRICTS[i] if 0 <= i < len(FERGANA_DISTRICTS) else None
+    names = _districts()
+    return names[i] if 0 <= i < len(names) else None
